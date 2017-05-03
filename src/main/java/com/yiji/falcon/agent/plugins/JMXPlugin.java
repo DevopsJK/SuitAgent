@@ -44,8 +44,11 @@ public interface JMXPlugin extends Plugin{
      * @param pid
      * 该服务当前运行的进程id
      * @return
+     * 若不实现，默认返回NO NAME，代表该插件无特定的agentSignName
      */
-    String agentSignName(JMXMetricsValueInfo jmxMetricsValueInfo, int pid);
+    default String agentSignName(JMXMetricsValueInfo jmxMetricsValueInfo, int pid){
+        return "NO NAME";
+    }
 
     /**
      * 插件监控的服务正常运行时的內建监控报告

@@ -221,7 +221,12 @@ public class JMXMetricsValue extends MetricsCommon {
         for (JMXMetricsValueInfo metricsValueInfo : jmxMetricsValueInfos) {
             JMXConnectionInfo jmxConnectionInfo = metricsValueInfo.getJmxConnectionInfo();
             if(StringUtils.isEmpty(jmxConnectionInfo.getName())){
-                //清除没有agentSignName的JMX连接
+                /*
+                 * 清除没有agentSignName的JMX连接
+                 * 此处是为过滤没有正常采集到数据的采集，防止上报没有用的监控数据
+                 * 注：没有实现agentSignName方法的插件会默认打上NO NAME的字符串，且并不会上传此tag
+                 */
+
                 removeJMXConnectCache(jmxConnectionInfo);
                 continue;
             }
@@ -284,7 +289,9 @@ public class JMXMetricsValue extends MetricsCommon {
 
                     //添加插件內建报告
                     Collection<FalconReportObject> inbuilt = jmxPlugin.inbuiltReportObjectsForValid(metricsValueInfo);
-                    result.addAll(inbuilt);
+                    if (inbuilt != null && !inbuilt.isEmpty()){
+                        result.addAll(inbuilt);
+                    }
 
                     result.stream().filter(reportObject -> !StringUtils.isEmpty(dirName)).forEach(reportObject -> {
                         reportObject.appendTags("dir=" + dirName);

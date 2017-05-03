@@ -1,30 +1,42 @@
 /*
  * www.yiji.com Inc.
- * Copyright (c) 2016 All Rights Reserved
+ * Copyright (c) 2017 All Rights Reserved
  */
-package com.yiji.falcon.agent.plugins.plugin.logstash;
+package com.yiji.falcon.agent.plugins.plugin.kafka;
+//             ,%%%%%%%%,
+//           ,%%/\%%%%/\%%
+//          ,%%%\c "" J/%%%
+// %.       %%%%/ o  o \%%%
+// `%%.     %%%%    _  |%%%
+//  `%%     `%%%%(__Y__)%%'
+//  //       ;%%%%`\-/%%%'
+// ((       /  `%%%%%%%'
+//  \\    .'          |
+//   \\  /       \  | |
+//    \\/攻城狮保佑) | |
+//     \         /_ | |__
+//     (___________)))))))                   `\/'
 /*
  * 修订记录:
- * guqiu@yiji.com 2016-06-27 16:33 创建
+ * long.qian@msxf.com 2017-05-03 10:44 创建
  */
 
 import com.yiji.falcon.agent.falcon.FalconReportObject;
 import com.yiji.falcon.agent.jmx.vo.JMXMetricsValueInfo;
 import com.yiji.falcon.agent.plugins.JMXPlugin;
+import com.yiji.falcon.agent.plugins.Plugin;
 import com.yiji.falcon.agent.plugins.util.PluginActivateType;
-import com.yiji.falcon.agent.util.CommandUtilForUnix;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
 /**
- * @author guqiu@yiji.com
+ *
+ * @author long.qian@msxf.com
  */
 @Slf4j
-public class LogstashPlugin implements JMXPlugin {
+public class KafkaPlugin implements JMXPlugin {
 
     private String basePropertiesKey;
     private String jmxServerName;
@@ -38,7 +50,7 @@ public class LogstashPlugin implements JMXPlugin {
      */
     @Override
     public String basePropertiesKey() {
-        return this.basePropertiesKey;
+        return basePropertiesKey;
     }
 
     /**
@@ -62,17 +74,17 @@ public class LogstashPlugin implements JMXPlugin {
      */
     @Override
     public Collection<FalconReportObject> inbuiltReportObjectsForValid(JMXMetricsValueInfo metricsValueInfo) {
-        return new ArrayList<>();
+        return null;
     }
 
     /**
      * 插件初始化操作
      * 该方法将会在插件运行前进行调用
-     * @param properties
-     * 包含的配置:
-     * 1、插件目录绝对路径的(key 为 pluginDir),可利用此属性进行插件自定制资源文件读取
-     * 2、插件指定的配置文件的全部配置信息(参见 {@link com.yiji.falcon.agent.plugins.Plugin#configFileName()} 接口项)
-     * 3、授权配置项(参见 {@link com.yiji.falcon.agent.plugins.Plugin#authorizationKeyPrefix()} 接口项
+     *
+     * @param properties 包含的配置:
+     *                   1、插件目录绝对路径的(key 为 pluginDir),可利用此属性进行插件自定制资源文件读取
+     *                   2、插件指定的配置文件的全部配置信息(参见 {@link Plugin#configFileName()} 接口项)
+     *                   3、授权配置项(参见 {@link Plugin#authorizationKeyPrefix()} 接口项
      */
     @Override
     public void init(Map<String, String> properties) {
@@ -90,7 +102,7 @@ public class LogstashPlugin implements JMXPlugin {
      */
     @Override
     public String serverName() {
-        return "logstash";
+        return "kafka";
     }
 
     /**
@@ -120,16 +132,5 @@ public class LogstashPlugin implements JMXPlugin {
     @Override
     public void agentShutdownHook() {
 
-    }
-
-    @Override
-    public String serverPath(int pid, String serverName) {
-        String dirPath = "";
-        try {
-            dirPath = CommandUtilForUnix.getCmdDirByPid(pid);
-        } catch (IOException e) {
-            log.error("logstash serverDirPath获取异常",e);
-        }
-        return dirPath;
     }
 }

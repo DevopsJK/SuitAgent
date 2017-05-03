@@ -342,7 +342,7 @@ public abstract class MetricsCommon {
         if(metricsType != null){
             signName += ",metrics.type=" + metricsType.getTypeName();
         }
-        if(StringUtils.isEmpty(agentSignName)){
+        if(StringUtils.isEmpty(agentSignName) || "NO NAME".equals(agentSignName)){
             return signName;
         }
         return signName + ",agentSignName=" + agentSignName;
