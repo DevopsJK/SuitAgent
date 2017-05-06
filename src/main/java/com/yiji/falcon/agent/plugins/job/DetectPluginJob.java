@@ -25,11 +25,12 @@ import org.quartz.JobExecutionException;
 public class DetectPluginJob implements Job {
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
+        long timestamp = System.currentTimeMillis() / 1000;
         JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
         String pluginName = jobDataMap.getString("pluginName");
         try {
             DetectPlugin detectPlugin = (DetectPlugin) jobDataMap.get("pluginObject");
-            MetricsCommon metricsValue = new DetectMetricsValue(detectPlugin);
+            MetricsCommon metricsValue = new DetectMetricsValue(detectPlugin,timestamp);
             //可能会涉及到外网的连接,采用异步方式
             ExecuteThreadUtil.execute(new JobThread(metricsValue,"detect job thread"));
         } catch (Exception e) {

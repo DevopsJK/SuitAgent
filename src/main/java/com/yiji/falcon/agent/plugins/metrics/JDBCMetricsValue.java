@@ -33,9 +33,11 @@ import java.util.*;
 @Slf4j
 public class JDBCMetricsValue extends MetricsCommon {
     private JDBCPlugin jdbcPlugin;
+    private long timestamp;
 
-    public JDBCMetricsValue(JDBCPlugin jdbcPlugin) {
+    public JDBCMetricsValue(JDBCPlugin jdbcPlugin, long timestamp) {
         this.jdbcPlugin = jdbcPlugin;
+        this.timestamp = timestamp;
     }
 
     /**
@@ -46,7 +48,7 @@ public class JDBCMetricsValue extends MetricsCommon {
      * @return
      */
     private FalconReportObject getVariabilityReport(boolean valid, JDBCConnectionInfo connectionInfo) {
-        FalconReportObject falconReportObject = MetricsCommon.generatorVariabilityReport(valid, jdbcPlugin.agentSignName(), jdbcPlugin.step(), jdbcPlugin, jdbcPlugin.serverName());
+        FalconReportObject falconReportObject = MetricsCommon.generatorVariabilityReport(valid, jdbcPlugin.agentSignName(),timestamp, jdbcPlugin.step(), jdbcPlugin, jdbcPlugin.serverName());
         //tag上添加数据库连接URL，以便区分多个数据库连接实例
         addURLTag(falconReportObject, connectionInfo);
         return falconReportObject;
@@ -102,7 +104,7 @@ public class JDBCMetricsValue extends MetricsCommon {
                                     reportObject.setMetric(MetricsCommon.getMetricsName(entry.getKey()));
                                     reportObject.setCounterType(CounterType.GAUGE);
                                     reportObject.setValue(metricsValue);
-                                    reportObject.setTimestamp(System.currentTimeMillis() / 1000);
+                                    reportObject.setTimestamp(timestamp);
                                     reportObject.appendTags(MetricsCommon.getTags(jdbcPlugin.agentSignName(), jdbcPlugin, jdbcPlugin.serverName(), MetricsType.SQL_CONF));
                                     addURLTag(reportObject, connectionInfo);
                                     MetricsCommon.setReportCommonValue(reportObject, jdbcPlugin.step());
@@ -123,6 +125,8 @@ public class JDBCMetricsValue extends MetricsCommon {
                         if (inbuilt != null) {
                             for (FalconReportObject falconReportObject : inbuilt) {
                                 addURLTag(falconReportObject, connectionInfo);
+                                //同一时间戳
+                                falconReportObject.setTimestamp(timestamp);
                                 result.add(falconReportObject);
                             }
                         }

@@ -28,6 +28,5 @@ public class IfStatVO {
     private String ifHCInMulticastPkts;
     private String ifHCOutMulticastPkts;
     private String ifOperStatus;
-    private Date time;
 
 }

@@ -64,7 +64,9 @@ public interface JDBCPlugin extends Plugin{
     /**
      * 插件监控的服务正常运行时的內建监控报告
      * 若有些特殊的监控值无法用配置文件进行配置监控,可利用此方法进行硬编码形式进行获取
-     * 注:此方法只有在监控对象可用时,才会调用,并加入到监控值报告中,一并上传
+     * 注:
+     * 1、此方法只有在监控对象可用时,才会调用,并加入到监控值报告中,一并上传
+     * 2、FalconReportObject中的timestamp属性会有系统自动进行赋值
      * @param connection
      * 数据库连接 不需在方法内关闭连接
      * @return

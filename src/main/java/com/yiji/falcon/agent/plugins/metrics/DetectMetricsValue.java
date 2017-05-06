@@ -25,9 +25,11 @@ import java.util.Set;
 public class DetectMetricsValue extends MetricsCommon {
 
     private DetectPlugin detectPlugin;
+    private long timestamp;
 
-    public DetectMetricsValue(DetectPlugin detectPlugin) {
+    public DetectMetricsValue(DetectPlugin detectPlugin, long timestamp) {
         this.detectPlugin = detectPlugin;
+        this.timestamp = timestamp;
     }
 
     /**
@@ -49,11 +51,11 @@ public class DetectMetricsValue extends MetricsCommon {
                 if(detectResult != null){
                     //可用性
                     if(detectResult.isSuccess()){
-                        FalconReportObject falconReportObject = MetricsCommon.generatorVariabilityReport(true,detectPlugin.agentSignName(address),detectPlugin.step(),detectPlugin,detectPlugin.serverName());
+                        FalconReportObject falconReportObject = MetricsCommon.generatorVariabilityReport(true,detectPlugin.agentSignName(address),timestamp,detectPlugin.step(),detectPlugin,detectPlugin.serverName());
                         addCommonTagFromDetectResult(detectResult,falconReportObject);
                         result.add(falconReportObject);
                     }else{
-                        FalconReportObject falconReportObject = MetricsCommon.generatorVariabilityReport(false,detectPlugin.agentSignName(address),detectPlugin.step(),detectPlugin,detectPlugin.serverName());
+                        FalconReportObject falconReportObject = MetricsCommon.generatorVariabilityReport(false,detectPlugin.agentSignName(address),timestamp,detectPlugin.step(),detectPlugin,detectPlugin.serverName());
                         addCommonTagFromDetectResult(detectResult,falconReportObject);
                         result.add(falconReportObject);
                     }
@@ -65,7 +67,7 @@ public class DetectMetricsValue extends MetricsCommon {
                             reportObject.setMetric(MetricsCommon.getMetricsName(metric.metricName));
                             reportObject.setCounterType(metric.counterType);
                             reportObject.setValue(metric.value);
-                            reportObject.setTimestamp(System.currentTimeMillis() / 1000);
+                            reportObject.setTimestamp(timestamp);
                             //打默认tag
                             reportObject.appendTags(MetricsCommon.getTags(detectPlugin.agentSignName(address),detectPlugin,detectPlugin.serverName(), MetricsType.DETECT))
                                     //打该监控值指定的tag

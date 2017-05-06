@@ -37,10 +37,12 @@ public class SNMPV3MetricsValue extends MetricsCommon {
 
     private SNMPV3Plugin plugin;
     private List<SNMPV3UserInfo> snmpv3UserInfoList;
+    private long timestamp;
 
-    public SNMPV3MetricsValue(SNMPV3Plugin plugin,List<SNMPV3UserInfo> snmpv3UserInfoList) {
+    public SNMPV3MetricsValue(SNMPV3Plugin plugin, List<SNMPV3UserInfo> snmpv3UserInfoList, long timestamp) {
         this.plugin = plugin;
         this.snmpv3UserInfoList = snmpv3UserInfoList;
+        this.timestamp = timestamp;
     }
 
     /**
@@ -148,7 +150,6 @@ public class SNMPV3MetricsValue extends MetricsCommon {
                         PDU ifHCOutMulticast = session.get(SNMPHelper.ifHCOutMulticastPktsOid + "." + index);
                         statVO.setIfHCOutMulticastPkts(SNMPHelper.getValueFromPDU(ifHCOutMulticast));
                     }
-                    statVO.setTime(new Date());
 
                     statVOs.add(statVO);
                 }
@@ -167,47 +168,46 @@ public class SNMPV3MetricsValue extends MetricsCommon {
                 }
 
                 String ifName = statVO.getIfName();
-                long time = statVO.getTime().getTime() / 1000;
                 reportObject.appendTags("ifName=" + ifName);
 
                 reportObject.setMetric("if.HCInBroadcastPkts");
                 reportObject.setValue(statVO.getIfHCInBroadcastPkts());
-                reportObject.setTimestamp(time);
+                reportObject.setTimestamp(timestamp);
                 reportObjects.add(reportObject.clone());
 
                 reportObject.setMetric("if.HCInMulticastPkts");
                 reportObject.setValue(statVO.getIfHCInMulticastPkts());
-                reportObject.setTimestamp(time);
+                reportObject.setTimestamp(timestamp);
                 reportObjects.add(reportObject.clone());
 
                 reportObject.setMetric("if.HCInOctets");
                 reportObject.setValue(statVO.getIfHCInOctets());
-                reportObject.setTimestamp(time);
+                reportObject.setTimestamp(timestamp);
                 reportObjects.add(reportObject.clone());
 
                 reportObject.setMetric("if.HCInUcastPkts");
                 reportObject.setValue(statVO.getIfHCInUcastPkts());
-                reportObject.setTimestamp(time);
+                reportObject.setTimestamp(timestamp);
                 reportObjects.add(reportObject.clone());
 
                 reportObject.setMetric("if.HCOutBroadcastPkts");
                 reportObject.setValue(statVO.getIfHCOutBroadcastPkts());
-                reportObject.setTimestamp(time);
+                reportObject.setTimestamp(timestamp);
                 reportObjects.add(reportObject.clone());
 
                 reportObject.setMetric("if.HCOutMulticastPkts");
                 reportObject.setValue(statVO.getIfHCOutMulticastPkts());
-                reportObject.setTimestamp(time);
+                reportObject.setTimestamp(timestamp);
                 reportObjects.add(reportObject.clone());
 
                 reportObject.setMetric("if.getIfHCOutUcastPkts");
                 reportObject.setValue(statVO.getIfHCOutUcastPkts());
-                reportObject.setTimestamp(time);
+                reportObject.setTimestamp(timestamp);
                 reportObjects.add(reportObject.clone());
 
                 reportObject.setMetric("if.HCOutOctets");
                 reportObject.setValue(statVO.getIfHCOutOctets());
-                reportObject.setTimestamp(time);
+                reportObject.setTimestamp(timestamp);
                 reportObjects.add(reportObject.clone());
 
                 //放在最后，设置GAUGE类型
@@ -215,7 +215,7 @@ public class SNMPV3MetricsValue extends MetricsCommon {
 
                 reportObject.setMetric("if.OperStatus");
                 reportObject.setValue(statVO.getIfOperStatus());
-                reportObject.setTimestamp(time);
+                reportObject.setTimestamp(timestamp);
                 reportObjects.add(reportObject.clone());
             }
         }
@@ -237,7 +237,7 @@ public class SNMPV3MetricsValue extends MetricsCommon {
         reportObject.appendTags(MetricsCommon.getTags(session.getAgentSignName(), plugin, plugin.serverName(), MetricsType.SNMP_COMMON_IN_BUILD));
         reportObject.setCounterType(CounterType.GAUGE);
         reportObject.setMetric("pingAvgTime");
-        reportObject.setTimestamp(System.currentTimeMillis() / 1000);
+        reportObject.setTimestamp(timestamp);
 
         String address = session.getUserInfo().getAddress();
 
@@ -269,7 +269,7 @@ public class SNMPV3MetricsValue extends MetricsCommon {
             sessionList = getSessions();
         } catch (IOException e) {
             log.warn("获取SNMP连接发生异常,push allUnVariability不可用报告", e);
-            result.add(MetricsCommon.generatorVariabilityReport(false, "allUnVariability", plugin.step(), plugin, plugin.serverName()));
+            result.add(MetricsCommon.generatorVariabilityReport(false, "allUnVariability",timestamp, plugin.step(), plugin, plugin.serverName()));
             return result;
 
         } catch (AgentArgumentException e) {
@@ -304,7 +304,7 @@ public class SNMPV3MetricsValue extends MetricsCommon {
     private List<FalconReportObject> getReports(SNMPV3Session session){
         List<FalconReportObject> temp = new ArrayList<>();
         if(!session.isValid()){
-            temp.add(MetricsCommon.generatorVariabilityReport(false, session.getAgentSignName(), plugin.step(), plugin, plugin.serverName()));
+            temp.add(MetricsCommon.generatorVariabilityReport(false, session.getAgentSignName(),timestamp, plugin.step(), plugin, plugin.serverName()));
         }else{
             //ping报告
             FalconReportObject reportObject = ping(session, 5);
@@ -314,15 +314,19 @@ public class SNMPV3MetricsValue extends MetricsCommon {
             try {
                 temp.addAll(getIfStatReports(session));
                 //添加可用性报告
-                temp.add(MetricsCommon.generatorVariabilityReport(true, session.getAgentSignName(), plugin.step(), plugin, plugin.serverName()));
+                temp.add(MetricsCommon.generatorVariabilityReport(true, session.getAgentSignName(),timestamp, plugin.step(), plugin, plugin.serverName()));
                 //添加插件报告
                 Collection<FalconReportObject> inBuildReports = plugin.inbuiltReportObjectsForValid(session);
                 if (inBuildReports != null && !inBuildReports.isEmpty()) {
-                    temp.addAll(inBuildReports);
+                    for (FalconReportObject inBuildReport : inBuildReports) {
+                        //统一时间戳
+                        inBuildReport.setTimestamp(timestamp);
+                        temp.add(inBuildReport);
+                    }
                 }
             } catch (Exception e) {
                 log.error("设备 {} 通过SNMP获取监控数据发生异常,push 该设备不可用报告", session.toString(), e);
-                temp.add(MetricsCommon.generatorVariabilityReport(false, session.getAgentSignName(), plugin.step(), plugin, plugin.serverName()));
+                temp.add(MetricsCommon.generatorVariabilityReport(false, session.getAgentSignName(),timestamp, plugin.step(), plugin, plugin.serverName()));
             }
         }
 

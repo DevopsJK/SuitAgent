@@ -29,12 +29,13 @@ public class SNMPPluginJob implements Job {
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
+        long timestamp = System.currentTimeMillis() / 1000;
         JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
         String pluginName = jobDataMap.getString("pluginName");
         try {
             SNMPV3Plugin plugin = (SNMPV3Plugin) jobDataMap.get("pluginObject");
             List<SNMPV3UserInfo> jobUsers = (List<SNMPV3UserInfo>) jobDataMap.get("userInfoList");
-            MetricsCommon metricsValue = new SNMPV3MetricsValue(plugin,jobUsers);
+            MetricsCommon metricsValue = new SNMPV3MetricsValue(plugin,jobUsers,timestamp);
             //SNMP监控数据获取时间较长,采用异步方式
             ExecuteThreadUtil.execute(new JobThread(metricsValue,"snmp v3 job thread"));
         } catch (Exception e) {

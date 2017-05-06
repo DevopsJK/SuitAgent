@@ -26,11 +26,12 @@ public class JDBCPluginJob implements Job{
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
+        long timestamp = System.currentTimeMillis() / 1000;
         JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
         String pluginName = jobDataMap.getString("pluginName");
         try {
             JDBCPlugin jdbcPlugin = (JDBCPlugin) jobDataMap.get("pluginObject");
-            MetricsCommon jdbcMetricsValue = new JDBCMetricsValue(jdbcPlugin);
+            MetricsCommon jdbcMetricsValue = new JDBCMetricsValue(jdbcPlugin,timestamp);
             ReportMetrics.push(jdbcMetricsValue.getReportObjects());
         } catch (Exception e) {
             log.error("插件 {} 运行异常",pluginName,e);
