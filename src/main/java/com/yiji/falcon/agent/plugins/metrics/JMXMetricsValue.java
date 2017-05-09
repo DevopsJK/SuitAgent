@@ -24,6 +24,8 @@ import org.apache.commons.lang.math.NumberUtils;
 import javax.management.openmbean.CompositeDataSupport;
 import java.io.File;
 import java.io.IOException;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -286,6 +288,7 @@ public class JMXMetricsValue extends MetricsCommon {
 
                     //添加內建报告
                     result.addAll(getInbuiltReportObjects(metricsValueInfo));
+                    result.addAll(getGCReportObject(metricsValueInfo));
 
                     //添加插件內建报告
                     Collection<FalconReportObject> inbuilt = jmxPlugin.inbuiltReportObjectsForValid(metricsValueInfo);
@@ -322,6 +325,42 @@ public class JMXMetricsValue extends MetricsCommon {
     }
 
     /**
+     * 获取GC监控报告
+     * @param metricsValueInfo
+     * @return
+     */
+    private Collection<FalconReportObject> getGCReportObject(JMXMetricsValueInfo metricsValueInfo){
+        List<FalconReportObject> result = new ArrayList<>();
+        if (metricsValueInfo == null) {
+            return result;
+        }
+        if(!metricsValueInfo.getJmxConnectionInfo().isValid() && metricsValueInfo.getJmxConnectionInfo().getType() == JMXUnavailabilityType.connectionFailed){
+            return result;
+        }
+
+        List<GarbageCollectorMXBean> garbageCollectorMXBeans = ManagementFactory.getGarbageCollectorMXBeans();
+        FalconReportObject falconReportObject = new FalconReportObject();
+        //服务的标识后缀名
+        String name = metricsValueInfo.getJmxConnectionInfo().getName();
+        setReportCommonValue(falconReportObject, jmxPlugin.step());
+        falconReportObject.setCounterType(CounterType.GAUGE);
+        falconReportObject.setTimestamp(metricsValueInfo.getTimestamp());
+        falconReportObject.appendTags(getTags(name, jmxPlugin, jmxPlugin.serverName(), MetricsType.JMX_OBJECT_IN_BUILD));
+        for (GarbageCollectorMXBean garbageCollectorMXBean : garbageCollectorMXBeans) {
+            falconReportObject.setObjectName(garbageCollectorMXBean.getObjectName());
+
+            falconReportObject.setMetric(getMetricsName(String.format("GC-%s-CollectionCount",garbageCollectorMXBean.getName().replace(" ",""))));
+            falconReportObject.setValue(String.valueOf(garbageCollectorMXBean.getCollectionCount()));
+            result.add(falconReportObject.clone());
+
+            falconReportObject.setMetric(getMetricsName(String.format("GC-%s-CollectionTime",garbageCollectorMXBean.getName().replace(" ",""))));
+            falconReportObject.setValue(String.valueOf(garbageCollectorMXBean.getCollectionTime()));
+            result.add(falconReportObject.clone());
+        }
+        return result;
+    }
+
+    /**
      * 內建监控报告
      * HeapMemoryCommitted
      * NonHeapMemoryCommitted
@@ -344,17 +383,17 @@ public class JMXMetricsValue extends MetricsCommon {
         }
         boolean hasHeapCollect = false;
         boolean hasMetaCollect = false;
+        FalconReportObject falconReportObject = new FalconReportObject();
+        //服务的标识后缀名
+        String name = metricsValueInfo.getJmxConnectionInfo().getName();
+        setReportCommonValue(falconReportObject, jmxPlugin.step());
+        falconReportObject.setCounterType(CounterType.GAUGE);
+        falconReportObject.setTimestamp(metricsValueInfo.getTimestamp());
+        falconReportObject.appendTags(getTags(name, jmxPlugin, jmxPlugin.serverName(), MetricsType.JMX_OBJECT_IN_BUILD));
         try {
             for (JMXObjectNameInfo objectNameInfo : metricsValueInfo.getJmxObjectNameInfoList()) {
-                //服务的标识后缀名
-                String name = objectNameInfo.getJmxConnectionInfo().getName();
 
-                FalconReportObject falconReportObject = new FalconReportObject();
-                setReportCommonValue(falconReportObject, jmxPlugin.step());
-                falconReportObject.setCounterType(CounterType.GAUGE);
-                falconReportObject.setTimestamp(metricsValueInfo.getTimestamp());
                 falconReportObject.setObjectName(objectNameInfo.getObjectName());
-                falconReportObject.appendTags(getTags(name, jmxPlugin, jmxPlugin.serverName(), MetricsType.JMX_OBJECT_IN_BUILD));
 
                 if ("java.lang:type=Memory".equals(objectNameInfo.getObjectName().toString())) {
                     hasHeapCollect = true;
