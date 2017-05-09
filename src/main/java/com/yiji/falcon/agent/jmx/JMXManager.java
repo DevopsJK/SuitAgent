@@ -79,27 +79,25 @@ public class JMXManager {
                     ExecuteThreadUtil.execute(() -> {
                         try {
                             Set<ObjectInstance> beanSet = connectionInfo.getMBeanServerConnection().queryMBeans(null, null);
-                            if("org.apache.catalina.startup.Bootstrap".equals(serverName)){
-                                //若tomcat服务器运行了springMVC的应用，必须要过滤有以下字符串的mBean，否则可能会导致tomcat中的应用启动失败
-                                beanSet = beanSet.stream()
-                                        .filter(mbean -> {
-                                            String objectName = mbean.getObjectName().toString();
-                                            if (objectName.contains("j2eeType=Servlet")){
-                                                return false;
-                                            }else if(objectName.contains("java.lang:type=Memory") ||
-                                                    objectName.contains("java.lang:type=MemoryPool,name=Metaspace")){
-                                                return true;
-                                            }else{
-                                                for (JMXMetricsConfiguration configuration : jmxMetricsConfigurationSet) {
-                                                    if(objectName.contains(configuration.getObjectName())){
-                                                        return true;
-                                                    }
+                            //若tomcat服务器运行了springMVC的应用，必须要过滤有以下字符串的mBean，否则可能会导致tomcat中的应用启动失败
+                            beanSet = beanSet.stream()
+                                    .filter(mbean -> {
+                                        String objectName = mbean.getObjectName().toString();
+                                        if (objectName.contains("j2eeType=Servlet")){
+                                            return false;
+                                        }else if(objectName.contains("java.lang:type=Memory") ||
+                                                objectName.contains("java.lang:type=MemoryPool,name=Metaspace")){
+                                            return true;
+                                        }else{
+                                            for (JMXMetricsConfiguration configuration : jmxMetricsConfigurationSet) {
+                                                if(objectName.contains(configuration.getObjectName())){
+                                                    return true;
                                                 }
                                             }
-                                            return false;
-                                        })
-                                        .collect(Collectors.toSet());
-                            }
+                                        }
+                                        return false;
+                                    })
+                                    .collect(Collectors.toSet());
 
                             if (!blockingQueue4BeanSet.offer(beanSet)){
                                 log.error("JMX {} 的objectNameList对象offer失败",connectionInfo.toString());
