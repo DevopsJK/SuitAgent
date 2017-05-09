@@ -90,11 +90,11 @@ public class DockerMetrics {
                 log.error("Docker 内存数据采集异常",e);
             }
             collectObjectList.addAll(getNetMetrics(containerName,container));
-            try {
-                collectObjectList.add(containerAppMetrics(containerName,containerId));
-            } catch (Exception e) {
-                log.error("Docker 容器应用数据采集异常",e);
-            }
+//            try {
+//                collectObjectList.add(containerAppMetrics(containerName,containerId));
+//            } catch (Exception e) {
+//                log.error("Docker 容器应用数据采集异常",e);
+//            }
         }
 
         //容器可用性
