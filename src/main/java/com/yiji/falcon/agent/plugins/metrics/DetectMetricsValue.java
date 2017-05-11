@@ -9,7 +9,6 @@ package com.yiji.falcon.agent.plugins.metrics;
  */
 
 import com.yiji.falcon.agent.falcon.FalconReportObject;
-import com.yiji.falcon.agent.falcon.MetricsType;
 import com.yiji.falcon.agent.plugins.DetectPlugin;
 import com.yiji.falcon.agent.util.StringUtils;
 import com.yiji.falcon.agent.vo.detect.DetectResult;
@@ -69,7 +68,7 @@ public class DetectMetricsValue extends MetricsCommon {
                             reportObject.setValue(metric.value);
                             reportObject.setTimestamp(timestamp);
                             //打默认tag
-                            reportObject.appendTags(MetricsCommon.getTags(detectPlugin.agentSignName(address),detectPlugin,detectPlugin.serverName(), MetricsType.DETECT))
+                            reportObject.appendTags(MetricsCommon.getTags(detectPlugin.agentSignName(address),detectPlugin,detectPlugin.serverName()))
                                     //打该监控值指定的tag
                                     .appendTags(metric.tags);
                             MetricsCommon.setReportCommonValue(reportObject,detectPlugin.step());

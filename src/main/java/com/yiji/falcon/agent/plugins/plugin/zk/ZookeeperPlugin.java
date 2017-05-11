@@ -10,7 +10,6 @@ package com.yiji.falcon.agent.plugins.plugin.zk;
 
 import com.yiji.falcon.agent.falcon.CounterType;
 import com.yiji.falcon.agent.falcon.FalconReportObject;
-import com.yiji.falcon.agent.falcon.MetricsType;
 import com.yiji.falcon.agent.jmx.vo.JMXMetricsValueInfo;
 import com.yiji.falcon.agent.jmx.vo.JMXObjectNameInfo;
 import com.yiji.falcon.agent.plugins.JMXPlugin;
@@ -108,7 +107,7 @@ public class ZookeeperPlugin implements JMXPlugin {
         falconReportObject.setMetric(MetricsCommon.getMetricsName("isZookeeperLeader"));
         falconReportObject.setValue(isLeader ? "1" : "0");
         falconReportObject.setTimestamp(timestamp);
-        falconReportObject.appendTags(MetricsCommon.getTags(name,this,serverName(), MetricsType.JMX_OBJECT_IN_BUILD));
+        falconReportObject.appendTags(MetricsCommon.getTags(name,this,serverName()));
         return falconReportObject;
     }
 

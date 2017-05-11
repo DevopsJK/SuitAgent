@@ -10,7 +10,6 @@ package com.yiji.falcon.agent.plugins.plugin.oracle;
 
 import com.yiji.falcon.agent.falcon.CounterType;
 import com.yiji.falcon.agent.falcon.FalconReportObject;
-import com.yiji.falcon.agent.falcon.MetricsType;
 import com.yiji.falcon.agent.plugins.JDBCPlugin;
 import com.yiji.falcon.agent.plugins.metrics.MetricsCommon;
 import com.yiji.falcon.agent.plugins.util.PluginActivateType;
@@ -181,7 +180,7 @@ public class OraclePlugin implements JDBCPlugin {
             MetricsCommon.setReportCommonValue(falconReportObject,step());
             falconReportObject.setCounterType(CounterType.GAUGE);
             falconReportObject.setTimestamp(System.currentTimeMillis() / 1000);
-            falconReportObject.appendTags(MetricsCommon.getTags(agentSignName(),this,serverName(), MetricsType.SQL_IN_BUILD))
+            falconReportObject.appendTags(MetricsCommon.getTags(agentSignName(),this,serverName()))
                     .appendTags("TSName=" + tsName.trim());
 
             falconReportObject.setMetric(getMetricsName("ts.size"));

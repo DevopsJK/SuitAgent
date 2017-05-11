@@ -8,7 +8,6 @@ import com.alibaba.fastjson.JSONObject;
 import com.yiji.falcon.agent.config.AgentConfiguration;
 import com.yiji.falcon.agent.falcon.CounterType;
 import com.yiji.falcon.agent.falcon.FalconReportObject;
-import com.yiji.falcon.agent.falcon.MetricsType;
 import com.yiji.falcon.agent.plugins.*;
 import com.yiji.falcon.agent.util.DateUtil;
 import com.yiji.falcon.agent.util.StringUtils;
@@ -210,7 +209,7 @@ public abstract class MetricsCommon {
         falconReportObject.setCounterType(CounterType.GAUGE);
         falconReportObject.setMetric(getMetricsName("availability"));
         falconReportObject.setValue(avaValue);
-        falconReportObject.appendTags(getTags(agentSignName,plugin,serverName,MetricsType.AVAILABILITY));
+        falconReportObject.appendTags(getTags(agentSignName,plugin,serverName));
         falconReportObject.setTimestamp(timestamp);
 
         if(!isAva){
@@ -333,15 +332,11 @@ public abstract class MetricsCommon {
      * @param agentSignName
      * @param plugin
      * @param serverName
-     * @param metricsType
      * @return
      */
-    public static String getTags(String agentSignName,Plugin plugin,String serverName,MetricsType metricsType){
+    public static String getTags(String agentSignName,Plugin plugin,String serverName){
         String signName = "service=" + serverName;
-        signName += ",service.type=" + getServiceTypeByPlugin(plugin);
-        if(metricsType != null){
-            signName += ",metrics.type=" + metricsType.getTypeName();
-        }
+        signName += ",serviceType=" + getServiceTypeByPlugin(plugin);
         if(StringUtils.isEmpty(agentSignName) || "NO NAME".equals(agentSignName)){
             return signName;
         }

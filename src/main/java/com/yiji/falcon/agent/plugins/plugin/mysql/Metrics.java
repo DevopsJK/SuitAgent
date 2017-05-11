@@ -10,7 +10,6 @@ package com.yiji.falcon.agent.plugins.plugin.mysql;
 
 import com.yiji.falcon.agent.falcon.CounterType;
 import com.yiji.falcon.agent.falcon.FalconReportObject;
-import com.yiji.falcon.agent.falcon.MetricsType;
 import com.yiji.falcon.agent.plugins.JDBCPlugin;
 import com.yiji.falcon.agent.plugins.metrics.MetricsCommon;
 
@@ -66,7 +65,7 @@ class Metrics {
             MetricsCommon.setReportCommonValue(falconReportObject,plugin.step());
             falconReportObject.setCounterType(CounterType.GAUGE);
             falconReportObject.setTimestamp(System.currentTimeMillis() / 1000);
-            falconReportObject.appendTags(MetricsCommon.getTags(plugin.agentSignName(),plugin,plugin.serverName(), MetricsType.SQL_IN_BUILD));
+            falconReportObject.appendTags(MetricsCommon.getTags(plugin.agentSignName(),plugin,plugin.serverName()));
 
             //Slave_IO_Running
             falconReportObject.setMetric("Slave_IO_Running");
@@ -113,7 +112,7 @@ class Metrics {
                 falconReportObject.setTimestamp(System.currentTimeMillis() / 1000);
                 falconReportObject.setMetric(metric);
                 falconReportObject.setValue(v + "");
-                falconReportObject.appendTags(MetricsCommon.getTags(plugin.agentSignName(),plugin,plugin.serverName(), MetricsType.SQL_IN_BUILD));
+                falconReportObject.appendTags(MetricsCommon.getTags(plugin.agentSignName(),plugin,plugin.serverName()));
                 reportObjectSet.add(falconReportObject);
             } catch (NumberFormatException ignored) {
             }
@@ -144,7 +143,7 @@ class Metrics {
             falconReportObject.setTimestamp(System.currentTimeMillis() / 1000);
             falconReportObject.setMetric(metric);
             falconReportObject.setValue(value);
-            falconReportObject.appendTags(MetricsCommon.getTags(plugin.agentSignName(),plugin,plugin.serverName(), MetricsType.SQL_IN_BUILD));
+            falconReportObject.appendTags(MetricsCommon.getTags(plugin.agentSignName(),plugin,plugin.serverName()));
             reportObjectSet.add(falconReportObject);
         }
         rs.close();

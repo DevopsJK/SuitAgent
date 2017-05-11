@@ -10,7 +10,6 @@ package com.yiji.falcon.agent.plugins.plugin.netDevice;
 
 import com.yiji.falcon.agent.falcon.CounterType;
 import com.yiji.falcon.agent.falcon.FalconReportObject;
-import com.yiji.falcon.agent.falcon.MetricsType;
 import com.yiji.falcon.agent.plugins.SNMPV3Plugin;
 import com.yiji.falcon.agent.plugins.metrics.MetricsCommon;
 import com.yiji.falcon.agent.plugins.util.PluginActivateType;
@@ -180,7 +179,7 @@ public class SwitchPlugin implements SNMPV3Plugin{
             if(collectObject != null){
                 FalconReportObject reportObject = new FalconReportObject();
                 MetricsCommon.setReportCommonValue(reportObject, this.step());
-                reportObject.appendTags(MetricsCommon.getTags(collectObject.getSession().getAgentSignName(), this, this.serverName(), MetricsType.SNMP_Plugin_IN_BUILD));
+                reportObject.appendTags(MetricsCommon.getTags(collectObject.getSession().getAgentSignName(), this, this.serverName()));
                 reportObject.setCounterType(CounterType.GAUGE);
                 reportObject.setMetric(collectObject.getMetrics());
                 reportObject.setValue(collectObject.getValue());

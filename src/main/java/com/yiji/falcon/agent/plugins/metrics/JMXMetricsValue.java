@@ -7,7 +7,6 @@ package com.yiji.falcon.agent.plugins.metrics;
 import com.yiji.falcon.agent.exception.JMXUnavailabilityType;
 import com.yiji.falcon.agent.falcon.CounterType;
 import com.yiji.falcon.agent.falcon.FalconReportObject;
-import com.yiji.falcon.agent.falcon.MetricsType;
 import com.yiji.falcon.agent.jmx.JMXConnection;
 import com.yiji.falcon.agent.jmx.vo.JMXConnectionInfo;
 import com.yiji.falcon.agent.jmx.vo.JMXMetricsValueInfo;
@@ -136,7 +135,7 @@ public class JMXMetricsValue extends MetricsCommon {
                     continue;
                 }
 
-                requestObject.appendTags(getTags(name, jmxPlugin, jmxPlugin.serverName(), MetricsType.JMX_OBJECT_CONF)).appendTags(jmxMetricsConfiguration.getTag());
+                requestObject.appendTags(getTags(name, jmxPlugin, jmxPlugin.serverName())).appendTags(jmxMetricsConfiguration.getTag());
 
                 //监控值重复性判断
                 FalconReportObject reportInRepeat = repeat.get(jmxMetricsConfiguration.getMetrics());
@@ -345,7 +344,7 @@ public class JMXMetricsValue extends MetricsCommon {
         setReportCommonValue(falconReportObject, jmxPlugin.step());
         falconReportObject.setCounterType(CounterType.GAUGE);
         falconReportObject.setTimestamp(metricsValueInfo.getTimestamp());
-        falconReportObject.appendTags(getTags(name, jmxPlugin, jmxPlugin.serverName(), MetricsType.JMX_OBJECT_IN_BUILD));
+        falconReportObject.appendTags(getTags(name, jmxPlugin, jmxPlugin.serverName()));
         for (GarbageCollectorMXBean garbageCollectorMXBean : garbageCollectorMXBeans) {
             falconReportObject.setObjectName(garbageCollectorMXBean.getObjectName());
 
@@ -389,7 +388,7 @@ public class JMXMetricsValue extends MetricsCommon {
         setReportCommonValue(falconReportObject, jmxPlugin.step());
         falconReportObject.setCounterType(CounterType.GAUGE);
         falconReportObject.setTimestamp(metricsValueInfo.getTimestamp());
-        falconReportObject.appendTags(getTags(name, jmxPlugin, jmxPlugin.serverName(), MetricsType.JMX_OBJECT_IN_BUILD));
+        falconReportObject.appendTags(getTags(name, jmxPlugin, jmxPlugin.serverName()));
         try {
             for (JMXObjectNameInfo objectNameInfo : metricsValueInfo.getJmxObjectNameInfoList()) {
 

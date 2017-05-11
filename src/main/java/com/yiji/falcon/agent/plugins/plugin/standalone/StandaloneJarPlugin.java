@@ -12,7 +12,6 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.yiji.falcon.agent.falcon.CounterType;
 import com.yiji.falcon.agent.falcon.FalconReportObject;
-import com.yiji.falcon.agent.falcon.MetricsType;
 import com.yiji.falcon.agent.jmx.vo.JMXMetricsValueInfo;
 import com.yiji.falcon.agent.plugins.JMXPlugin;
 import com.yiji.falcon.agent.plugins.metrics.MetricsCommon;
@@ -145,7 +144,7 @@ public class StandaloneJarPlugin implements JMXPlugin {
                         JSONObject jsonObject = JSON.parseObject(jsonStr);
                         Set<String> keys = jsonObject.keySet();
                         for (String key : keys) {
-                            falconReportObject.setTags(MetricsCommon.getTags(jarName,this,serverName(), MetricsType.JMX_OBJECT_IN_BUILD));
+                            falconReportObject.setTags(MetricsCommon.getTags(jarName,this,serverName()));
                             if(key.startsWith("tp") || key.startsWith("druid")){
                                 String metrics = getYijiBootMetricsPrefix(key);
                                 String tagValue = key.replace(metrics + ".","");
@@ -167,7 +166,7 @@ public class StandaloneJarPlugin implements JMXPlugin {
                     if(httpHealthResult.getStatus() >= 400){
                         log.error("YijiBoot应用健康状况获取失败:http请求失败 {}",httpHealthResult);
                     }else{
-                        falconReportObject.setTags(MetricsCommon.getTags(jarName,this,serverName(), MetricsType.JMX_OBJECT_IN_BUILD));
+                        falconReportObject.setTags(MetricsCommon.getTags(jarName,this,serverName()));
                         String jsonStr = httpHealthResult.getResult();
                         JSONObject jsonObject = JSON.parseObject(jsonStr);
                         Map<String,Object> map = new HashMap<>();

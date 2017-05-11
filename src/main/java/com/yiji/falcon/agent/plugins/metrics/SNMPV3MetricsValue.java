@@ -11,7 +11,6 @@ package com.yiji.falcon.agent.plugins.metrics;
 import com.yiji.falcon.agent.exception.AgentArgumentException;
 import com.yiji.falcon.agent.falcon.CounterType;
 import com.yiji.falcon.agent.falcon.FalconReportObject;
-import com.yiji.falcon.agent.falcon.MetricsType;
 import com.yiji.falcon.agent.plugins.SNMPV3Plugin;
 import com.yiji.falcon.agent.plugins.util.SNMPHelper;
 import com.yiji.falcon.agent.plugins.util.SNMPV3Session;
@@ -158,7 +157,7 @@ public class SNMPV3MetricsValue extends MetricsCommon {
             for (IfStatVO statVO : statVOs) {
                 FalconReportObject reportObject = new FalconReportObject();
                 MetricsCommon.setReportCommonValue(reportObject, plugin.step());
-                reportObject.appendTags(MetricsCommon.getTags(session.getAgentSignName(), plugin, plugin.serverName(), MetricsType.SNMP_COMMON_IN_BUILD));
+                reportObject.appendTags(MetricsCommon.getTags(session.getAgentSignName(), plugin, plugin.serverName()));
                 reportObject.setCounterType(CounterType.COUNTER);
                 String endPoint = userInfo.getEndPoint();
                 if (!StringUtils.isEmpty(endPoint)) {
@@ -234,7 +233,7 @@ public class SNMPV3MetricsValue extends MetricsCommon {
     public FalconReportObject ping(SNMPV3Session session, int count) {
         FalconReportObject reportObject = new FalconReportObject();
         MetricsCommon.setReportCommonValue(reportObject, plugin.step());
-        reportObject.appendTags(MetricsCommon.getTags(session.getAgentSignName(), plugin, plugin.serverName(), MetricsType.SNMP_COMMON_IN_BUILD));
+        reportObject.appendTags(MetricsCommon.getTags(session.getAgentSignName(), plugin, plugin.serverName()));
         reportObject.setCounterType(CounterType.GAUGE);
         reportObject.setMetric("pingAvgTime");
         reportObject.setTimestamp(timestamp);
