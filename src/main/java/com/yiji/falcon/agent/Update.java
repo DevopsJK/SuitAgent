@@ -57,7 +57,16 @@ public class Update {
             return;
         }
         if(downloadUpdatePack()){
-            String baseDir = updateFilesTempDir + File.separator + "SuitAgent-Update-master";
+//            String baseDir = updateFilesTempDir + File.separator + "SuitAgent-Update-master";
+            String baseDir = updateFilesTempDir + File.separator;
+            File tempDir = new File(baseDir);
+            if (tempDir.exists() && tempDir.list() != null && tempDir.list().length > 0){
+                baseDir += tempDir.list()[0];
+            }else {
+                log.error("{}no update data found",log4UpdateStart);
+                return;
+            }
+
             boolean update = false;
             File baseDirFile = new File(baseDir);
             String[] ss = baseDirFile.list();
