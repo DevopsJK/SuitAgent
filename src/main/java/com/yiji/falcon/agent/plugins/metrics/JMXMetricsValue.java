@@ -482,7 +482,7 @@ public class JMXMetricsValue extends MetricsCommon {
                 log.warn("此次可能因监控值超时原因，堆内存的相关信息未能采集到。");
             }
             if(!hasMetaCollect){
-                log.warn("JDK版本小于8或可能因监控值采集超时原因，元空间内存的相关信息未能采集到");
+                log.warn("JDK版本小于8或元空间参数未设置或可能因监控值采集超时等原因，元空间内存的相关信息未能采集到");
             }
 
         } catch (Exception e) {
