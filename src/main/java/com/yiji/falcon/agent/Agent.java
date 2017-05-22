@@ -32,6 +32,8 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.util.Collection;
 
+import static com.yiji.falcon.agent.plugins.metrics.MetricsCommon.getEndpointByTrans;
+
 /*
  * 修订记录:
  * guqiu@yiji.com 2016-06-22 17:48 创建
@@ -101,6 +103,8 @@ public class Agent extends Thread{
                 System.exit(0);
             }
             String falconAgentConfContent = FileUtil.getTextFileContent(falconAgentConfFile);
+            //将"hostname": "", 配置替换为与SuitAgent相同的Endpoint配置
+            falconAgentConfContent = falconAgentConfContent.replaceAll("\"hostname\"\\s*:\\s*\"\"\\s*,",String.format("\"hostname\": \"%s\",",getEndpointByTrans(AgentConfiguration.INSTANCE.getAgentEndpoint())));
             if(StringUtils.isEmpty(falconAgentConfContent)){
                 log.error("Agent 启动失败 - Falcon Agent配置文件:{} 无配置内容",falconAgentConfFile);
                 System.exit(0);
