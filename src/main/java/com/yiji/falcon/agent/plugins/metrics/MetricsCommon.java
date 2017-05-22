@@ -291,7 +291,7 @@ public abstract class MetricsCommon {
         try {
             InetAddress addr = InetAddress.getLocalHost();
             hostIP = addr.getHostAddress();
-            hostName = addr.getHostName();
+            hostName = addr.getHostName().replace(".","-");
         } catch (UnknownHostException e) {
             log.error("获取系统Host信息失败",e);
         }
