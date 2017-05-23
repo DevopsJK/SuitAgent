@@ -108,7 +108,7 @@ public class ElasticSearchPlugin implements JMXPlugin {
                 log.warn("ES版本获取失败，该插件目前支持的ES版本为：{}",support);
                 return new ArrayList<>();
             }else {
-                String[] supports = support.split("'\\.");
+                String[] supports = support.split("\\.");
                 String[] ver_s = version.split("\\.");
                 for (int i=0;i<3;i++){
                     if (Integer.parseInt(ver_s[i]) > Integer.parseInt(supports[i])){
