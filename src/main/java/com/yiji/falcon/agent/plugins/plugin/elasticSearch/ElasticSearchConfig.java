@@ -180,6 +180,26 @@ public class ElasticSearchConfig {
         return getNodeNameOrId(pid,1);
     }
 
+    static String getVersion(int pid) throws IOException {
+        String url = getConnectionUrl(pid);
+        String responseText;
+        try {
+            responseText = HttpUtil.get(url).getResult();
+        } catch (IOException e) {
+            log.error("访问{}异常",url,e);
+            return "";
+        }
+        JSONObject responseJSON = JSONObject.parseObject(responseText);
+        if (responseJSON == null || responseJSON.isEmpty()){
+            return "";
+        }
+        JSONObject version = responseJSON.getJSONObject("version");
+        if (version == null || version.isEmpty()){
+            return "";
+        }
+        return version.getString("number");
+    }
+
     private static String getNodeNameOrId(int pid,int type) throws IOException {
         String selfNodeId = "";
         String selfNodeName = "";

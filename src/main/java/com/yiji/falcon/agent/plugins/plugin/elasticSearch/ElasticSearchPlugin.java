@@ -95,11 +95,29 @@ public class ElasticSearchPlugin implements JMXPlugin {
      */
     @Override
     public Collection<FalconReportObject> inbuiltReportObjectsForValid(JMXMetricsValueInfo metricsValueInfo) {
+        String support = "2.2.1";
         // 指定配置中配置的监控值
         int pid = metricsValueInfo.getJmxConnectionInfo().getPid();
+
+
         Set<FalconReportObject> result = new HashSet<>();
         String configPath = pluginDir + File.separator + metricsConfFile;
         try {
+            String version = ElasticSearchConfig.getVersion(pid);
+            if (StringUtils.isEmpty(version)){
+                log.warn("ES版本获取失败，该插件目前支持的ES版本为：{}",support);
+                return new ArrayList<>();
+            }else {
+                String[] supports = support.split("'\\.");
+                String[] ver_s = version.split("\\.");
+                for (int i=0;i<3;i++){
+                    if (Integer.parseInt(ver_s[i]) > Integer.parseInt(supports[i])){
+                        log.warn("不支持当前ES版本（%s），本插件支持的ES版本为 %s",version,support);
+                        return new ArrayList<>();
+                    }
+                }
+            }
+
             String selfNodeId = ElasticSearchConfig.getNodeId(pid);
             String selfNodeName = ElasticSearchConfig.getNodeName(pid);
             if(StringUtils.isEmpty(selfNodeId) || StringUtils.isEmpty(selfNodeName)){
