@@ -66,8 +66,8 @@ public class Agent extends Thread{
         });
 
         try {
-            this.agentWebServerStart(AgentConfiguration.INSTANCE.getAgentWebPort());
             this.agentServerStart(AgentConfiguration.INSTANCE.getAgentPort());
+            this.agentWebServerStart(AgentConfiguration.INSTANCE.getAgentWebPort());
         } catch (IOException e) {
             log.error("Agent启动失败",e);
         }
