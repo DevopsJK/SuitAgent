@@ -33,7 +33,7 @@ public class HttpServer extends Thread{
     public static int status = 0;
 
     private int port;
-    private ServerSocket serverSocket;
+    private static ServerSocket serverSocket;
 
     public HttpServer(int port) {
         this.port = port;
@@ -86,12 +86,11 @@ public class HttpServer extends Thread{
         }
     }
 
-    private void close() throws IOException {
+    public static void close() throws IOException {
         if(serverSocket != null && !serverSocket.isClosed()){
             serverSocket.close();
             status = 0;
             log.info("Web 服务已关闭");
         }
     }
-
 }

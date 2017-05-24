@@ -188,7 +188,12 @@ public class Agent extends Thread{
                 HttpResult response = HttpUtil.get(String.format("http://%s:%d/__SHUTDOWN__", InetAddress.getByName("0.0.0.0").getHostName(),AgentConfiguration.INSTANCE.getAgentWebPort()));
                 log.info("web关闭结果:{}",response);
             } catch (Exception e) {
-                log.error("web关闭",e);
+                log.warn("Web正常关闭失败，进行强制关闭");
+                try {
+                    HttpServer.close();
+                } catch (IOException e1) {
+                    log.error("",e);
+                }
             }
         }
         try {
