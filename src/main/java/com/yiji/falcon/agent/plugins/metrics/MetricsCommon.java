@@ -10,6 +10,7 @@ import com.yiji.falcon.agent.falcon.CounterType;
 import com.yiji.falcon.agent.falcon.FalconReportObject;
 import com.yiji.falcon.agent.plugins.*;
 import com.yiji.falcon.agent.util.DateUtil;
+import com.yiji.falcon.agent.util.HostUtil;
 import com.yiji.falcon.agent.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,8 +18,6 @@ import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -289,10 +288,9 @@ public abstract class MetricsCommon {
         String hostIP = "unKnowHostIP";
         String hostName = "unKnowHostName";
         try {
-            InetAddress addr = InetAddress.getLocalHost();
-            hostIP = addr.getHostAddress();
-            hostName = addr.getHostName().replace(".","-");
-        } catch (UnknownHostException e) {
+            hostIP = HostUtil.getHostIp();
+            hostName = HostUtil.getHostName().replace(".","-");
+        } catch (Exception e) {
             log.error("获取系统Host信息失败",e);
         }
         return endPoint.replace("{host.ip}",hostIP).

@@ -22,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
@@ -126,8 +125,8 @@ public class StandaloneJarPlugin implements JMXPlugin {
             }
             if(!StringUtils.isEmpty(port)){
                 try {
-                    String httpHealthUrl = String.format("http://%s:%s/mgt/health", InetAddress.getLocalHost().getHostAddress(),port);
-                    String httpMetricsUrl = String.format("http://%s:%s/mgt/metrics", InetAddress.getLocalHost().getHostAddress(),port);
+                    String httpHealthUrl = String.format("http://%s:%s/mgt/health", HostUtil.getHostIp(),port);
+                    String httpMetricsUrl = String.format("http://%s:%s/mgt/metrics", HostUtil.getHostIp(),port);
 
                     HttpResult httpHealthResult = HttpUtil.get(httpHealthUrl);
                     HttpResult httpMetricsResult = HttpUtil.get(httpMetricsUrl);

@@ -9,6 +9,7 @@ import com.sun.tools.attach.VirtualMachineDescriptor;
 import com.yiji.falcon.agent.config.AgentConfiguration;
 import com.yiji.falcon.agent.exception.JMXUnavailabilityType;
 import com.yiji.falcon.agent.jmx.vo.JMXConnectionInfo;
+import com.yiji.falcon.agent.util.HostUtil;
 import com.yiji.falcon.agent.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
@@ -17,8 +18,6 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXServiceURL;
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -281,13 +280,13 @@ public class JMXConnection {
 
         JMXConnectUrlInfo jmxConnectUrlInfo = null;
         try {
-            jmxConnectUrlInfo = AbstractJmxCommand.findJMXRemoteUrlByProcessId(Integer.parseInt(desc.id()), InetAddress.getLocalHost().getHostAddress());
+            jmxConnectUrlInfo = AbstractJmxCommand.findJMXRemoteUrlByProcessId(Integer.parseInt(desc.id()), HostUtil.getHostIp());
             if(jmxConnectUrlInfo != null){
                 log.info("JMX Remote URL:{}",jmxConnectUrlInfo);
             }else if(!AgentConfiguration.INSTANCE.isAgentJMXLocalConnect()){
                 log.warn("应用未配置JMX Remote功能,请给应用配置JMX Remote");
             }
-        } catch (UnknownHostException e) {
+        } catch (Exception e) {
             log.error("JMX连接本机地址获取失败",e);
         }
         return jmxConnectUrlInfo;
