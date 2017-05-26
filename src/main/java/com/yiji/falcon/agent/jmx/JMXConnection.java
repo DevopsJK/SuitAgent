@@ -18,10 +18,7 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXServiceURL;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -85,23 +82,13 @@ public class JMXConnection {
                     if(file.toPath().getFileName().toString().equals(serverName)){
                         return true;
                     }
-                }else if(desc.displayName().contains(serverName)){
+                }else if(hasContainsServerName(desc.displayName(),serverName)){
                     return true;
                 }
 
             }
         }
         return false;
-    }
-
-    /**
-     *
-     * @throws IOException
-     */
-    public static void closeAll() {
-        for (JMXConnectionInfo jmxConnectionInfo : connectCacheLibrary.values()) {
-            jmxConnectionInfo.closeJMXConnector();
-        }
     }
 
     /**
@@ -119,14 +106,42 @@ public class JMXConnection {
                 if(file.toPath().getFileName().toString().equals(serverName)){
                     vmDescList.add(desc);
                 }
-            }else if(desc.displayName().contains(serverName)){
+            }else if(hasContainsServerName(desc.displayName(),serverName)){
                 vmDescList.add(desc);
             }
         }
         return vmDescList;
     }
 
+    /**
+     * 判断指定的目标服务名是否在探测的展示名中
+     * @param displayName
+     * @param serverName
+     * @return
+     */
+    public static boolean hasContainsServerName(String displayName,String serverName){
+        if (StringUtils.isEmpty(serverName)){
+            return false;
+        }
+        boolean has = true;
+        List<String> displaySplit = Arrays.asList(displayName.split("\\s+"));
+        for (String s : serverName.split("\\s+")) {
+            if (!displaySplit.contains(s)){
+                has = false;
+            }
+        }
+        return has;
+    }
 
+    /**
+     *
+     * @throws IOException
+     */
+    public static void closeAll() {
+        for (JMXConnectionInfo jmxConnectionInfo : connectCacheLibrary.values()) {
+            jmxConnectionInfo.closeJMXConnector();
+        }
+    }
 
     /**
      * 获取JMX连接
