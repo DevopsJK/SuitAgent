@@ -26,7 +26,7 @@ public enum  AgentConfiguration {
     INSTANCE;
 
     //版本不能大于 x.9
-    public static final float VERSION = (float) 13.8;
+    public static final float VERSION = (float) 13.9;
 
     /**
      * quartz配置文件路径
@@ -196,47 +196,75 @@ public enum  AgentConfiguration {
 
     private void init(){
 
-        if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_ENDPOINT))){
-            this.agentEndpoint = agentConf.getProperty(CONF_AGENT_ENDPOINT);
-        }
-
-        if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_WEB_PORT))){
-            try {
-                this.agentWebPort = Integer.parseInt(agentConf.getProperty(CONF_AGENT_WEB_PORT));
-            } catch (Exception e) {
-                System.err.println(String.format("Agent启动失败,端口配置%s无效:%s", CONF_AGENT_WEB_PORT, agentConf.getProperty(CONF_AGENT_WEB_PORT)));
-                System.exit(0);
+        if (!StringUtils.isEmpty(System.getProperty(CONF_AGENT_ENDPOINT))){
+            this.agentEndpoint = System.getProperty(CONF_AGENT_ENDPOINT);
+        }else {
+            if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_ENDPOINT))){
+                this.agentEndpoint = agentConf.getProperty(CONF_AGENT_ENDPOINT);
             }
         }
 
-        if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_WEB_ENABLE))){
-            this.webEnable = "true".equals(agentConf.getProperty(CONF_AGENT_WEB_ENABLE));
+        try {
+            if (!StringUtils.isEmpty(System.getProperty(CONF_AGENT_WEB_PORT))){
+                this.agentWebPort = Integer.parseInt(System.getProperty(CONF_AGENT_WEB_PORT));
+            }else {
+                if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_WEB_PORT))){
+                    this.agentWebPort = Integer.parseInt(agentConf.getProperty(CONF_AGENT_WEB_PORT));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println(String.format("Agent启动失败,端口配置%s无效:%s", CONF_AGENT_WEB_PORT, agentConf.getProperty(CONF_AGENT_WEB_PORT)));
+            System.exit(0);
         }
 
-        if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_MOCK_VALID_TIME))){
-            try {
-                this.mockValidTime = Integer.parseInt(agentConf.getProperty(CONF_AGENT_MOCK_VALID_TIME));
-            } catch (NumberFormatException e) {
-                System.err.println(String.format("Agent启动失败,mock有效时间配置 %s 无效: %s", CONF_AGENT_MOCK_VALID_TIME, agentConf.getProperty(CONF_AGENT_MOCK_VALID_TIME)));
-                System.exit(0);
+        if (!StringUtils.isEmpty(System.getProperty(CONF_AGENT_WEB_ENABLE))){
+            this.webEnable = "true".equals(System.getProperty(CONF_AGENT_WEB_ENABLE));
+        }else {
+            if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_WEB_ENABLE))){
+                this.webEnable = "true".equals(agentConf.getProperty(CONF_AGENT_WEB_ENABLE));
             }
         }
 
-        if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_JMX_LOCAL_CONNECT))){
-            this.agentJMXLocalConnect = "true".equals(agentConf.getProperty(CONF_AGENT_JMX_LOCAL_CONNECT));
-        }
-
-        if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_UPDATE_URL))){
-            this.agentUpdateUrl = agentConf.getProperty(CONF_AGENT_UPDATE_URL);
-        }
-
-        if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_PORT))){
-            try {
-                this.agentPort = Integer.parseInt(agentConf.getProperty(CONF_AGENT_PORT));
-            } catch (NumberFormatException e) {
-                System.err.println(String.format("Agent启动失败,端口配置%s无效:%s", CONF_AGENT_PORT, agentConf.getProperty(CONF_AGENT_PORT)));
-                System.exit(0);
+        try {
+            if (!StringUtils.isEmpty(System.getProperty(CONF_AGENT_MOCK_VALID_TIME))){
+                this.mockValidTime = Integer.parseInt(System.getProperty(CONF_AGENT_MOCK_VALID_TIME));
+            }else {
+                if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_MOCK_VALID_TIME))){
+                    this.mockValidTime = Integer.parseInt(agentConf.getProperty(CONF_AGENT_MOCK_VALID_TIME));
+                }
             }
+        } catch (NumberFormatException e) {
+            System.err.println(String.format("Agent启动失败,mock有效时间配置 %s 无效: %s", CONF_AGENT_MOCK_VALID_TIME, agentConf.getProperty(CONF_AGENT_MOCK_VALID_TIME)));
+            System.exit(0);
+        }
+
+        if (!StringUtils.isEmpty(System.getProperty(CONF_AGENT_JMX_LOCAL_CONNECT))){
+            this.agentJMXLocalConnect = "true".equals(System.getProperty(CONF_AGENT_JMX_LOCAL_CONNECT));
+        }else {
+            if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_JMX_LOCAL_CONNECT))){
+                this.agentJMXLocalConnect = "true".equals(agentConf.getProperty(CONF_AGENT_JMX_LOCAL_CONNECT));
+            }
+        }
+
+        if (!StringUtils.isEmpty(System.getProperty(CONF_AGENT_UPDATE_URL))){
+            this.agentUpdateUrl = System.getProperty(CONF_AGENT_UPDATE_URL);
+        }else {
+            if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_UPDATE_URL))){
+                this.agentUpdateUrl = agentConf.getProperty(CONF_AGENT_UPDATE_URL);
+            }
+        }
+
+        try {
+            if (!StringUtils.isEmpty(System.getProperty(CONF_AGENT_PORT))){
+                    this.agentPort = Integer.parseInt(System.getProperty(CONF_AGENT_PORT));
+            }else {
+                if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_PORT))){
+                    this.agentPort = Integer.parseInt(agentConf.getProperty(CONF_AGENT_PORT));
+                }
+            }
+        } catch (NumberFormatException e) {
+            System.err.println(String.format("Agent启动失败,端口配置%s无效:%s", CONF_AGENT_PORT, agentConf.getProperty(CONF_AGENT_PORT)));
+            System.exit(0);
         }
 
         if(StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_FALCON_PUSH_URL))){
@@ -245,32 +273,41 @@ public enum  AgentConfiguration {
         }
         this.agentPushUrl = agentConf.getProperty(CONF_AGENT_FALCON_PUSH_URL);
 
-        if(StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_FLUSH_TIME))){
-            System.err.println("Agent启动失败,未指定配置:" + CONF_AGENT_FLUSH_TIME);
-            System.exit(0);
-        }
         try {
-            this.agentFlushTime = Integer.parseInt(agentConf.getProperty(CONF_AGENT_FLUSH_TIME));
-            if(this.agentFlushTime <= 0){
-                System.err.println(String.format("Agent启动失败,自动发现服务的刷新周期配置 %s 必须大于0: %s",CONF_AGENT_FLUSH_TIME,agentConf.getProperty(CONF_AGENT_FLUSH_TIME)));
-                System.exit(0);
+            if (!StringUtils.isEmpty(System.getProperty(CONF_AGENT_FLUSH_TIME))){
+                this.agentFlushTime = Integer.parseInt(System.getProperty(CONF_AGENT_FLUSH_TIME));
+            }else {
+                if(StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_FLUSH_TIME))){
+                    System.err.println("Agent启动失败,未指定配置:" + CONF_AGENT_FLUSH_TIME);
+                    System.exit(0);
+                }
+                this.agentFlushTime = Integer.parseInt(agentConf.getProperty(CONF_AGENT_FLUSH_TIME));
+                if(this.agentFlushTime <= 0){
+                    System.err.println(String.format("Agent启动失败,自动发现服务的刷新周期配置 %s 必须大于0: %s",CONF_AGENT_FLUSH_TIME,agentConf.getProperty(CONF_AGENT_FLUSH_TIME)));
+                    System.exit(0);
+                }
             }
         } catch (NumberFormatException e) {
             System.err.println(String.format("Agent启动失败,自动发现服务的刷新周期配置%s无效:%s",CONF_AGENT_FLUSH_TIME,agentConf.getProperty(CONF_AGENT_FLUSH_TIME)));
             System.exit(0);
         }
 
-        if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_MAX_THREAD))){
-            try {
-                this.agentMaxThreadCount = Integer.parseInt(agentConf.getProperty(CONF_AGENT_MAX_THREAD));
-                if(this.agentMaxThreadCount <= 5){
-                    System.err.println(String.format("Agent启动失败,最大线程数 %s 必须大于5: %s",CONF_AGENT_MAX_THREAD,agentConf.getProperty(CONF_AGENT_MAX_THREAD)));
-                    System.exit(0);
+        try {
+            if (!StringUtils.isEmpty(System.getProperty(CONF_AGENT_MAX_THREAD))){
+                this.agentMaxThreadCount = Integer.parseInt(System.getProperty(CONF_AGENT_MAX_THREAD));
+            }else {
+                if(!StringUtils.isEmpty(agentConf.getProperty(CONF_AGENT_MAX_THREAD))){
+
+                        this.agentMaxThreadCount = Integer.parseInt(agentConf.getProperty(CONF_AGENT_MAX_THREAD));
+                        if(this.agentMaxThreadCount <= 5){
+                            System.err.println(String.format("Agent启动失败,最大线程数 %s 必须大于5: %s",CONF_AGENT_MAX_THREAD,agentConf.getProperty(CONF_AGENT_MAX_THREAD)));
+                            System.exit(0);
+                        }
                 }
-            } catch (NumberFormatException e) {
-                System.err.println(String.format("Agent启动失败,最大线程数%s无效:%s",CONF_AGENT_MAX_THREAD,agentConf.getProperty(CONF_AGENT_MAX_THREAD)));
-                System.exit(0);
             }
+        } catch (NumberFormatException e) {
+            System.err.println(String.format("Agent启动失败,最大线程数%s无效:%s",CONF_AGENT_MAX_THREAD,agentConf.getProperty(CONF_AGENT_MAX_THREAD)));
+            System.exit(0);
         }
 
     }

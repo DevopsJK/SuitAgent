@@ -34,6 +34,15 @@ do
 done
 agent_class=com.yiji.falcon.agent.Agent
 
+CMD=$1
+if [ $2 ]; then
+	for i in $@; do
+		if [ "$i" != "$CMD" ]; then
+			JAVA="${JAVA} ${i}"
+		fi
+	done
+fi
+
 client_cmd="${JAVA} \
 	-server -Xms64m -Xmx256m -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m -XX:SurvivorRatio=4 -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:LargePageSizeInBytes=128m \
 	-XX:+UseFastAccessorMethods -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=70 -XX:+UseParNewGC -XX:MaxTenuringThreshold=5 -XX:+CMSClassUnloadingEnabled \
@@ -49,10 +58,10 @@ client_cmd="${JAVA} \
 	-Dagent.falcon.dir=${agentHome}/falcon \
 	-Dagent.falcon.conf.dir=${agentHome}/conf/falcon \
 	-Dagent.home.dir=${agentHome} \
-	-cp ${agent_classpath} ${agent_class} $1
+	-cp ${agent_classpath} ${agent_class} ${CMD}
 "
 
-case $1 in
+case ${CMD} in
 start)
 	nohup $client_cmd > /dev/null 2>&1 &
 ;;
