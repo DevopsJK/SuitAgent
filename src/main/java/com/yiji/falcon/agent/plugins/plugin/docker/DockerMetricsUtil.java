@@ -14,7 +14,6 @@ import com.yiji.falcon.agent.util.CommandUtilForUnix;
 import com.yiji.falcon.agent.util.HttpUtil;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author guqiu@yiji.com
