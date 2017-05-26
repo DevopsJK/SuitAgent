@@ -126,8 +126,10 @@ public class JMXConnection {
         boolean has = true;
         List<String> displaySplit = Arrays.asList(displayName.split("\\s+"));
         for (String s : serverName.split("\\s+")) {
+            //boot  start
             if (!displaySplit.contains(s)){
                 has = false;
+                break;
             }
         }
         return has;
