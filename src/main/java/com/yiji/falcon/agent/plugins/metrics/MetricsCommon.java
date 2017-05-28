@@ -285,11 +285,15 @@ public abstract class MetricsCommon {
      * @return
      */
     public static String getEndpointByTrans(String endPoint){
-        String hostIP = "unKnowHostIP";
-        String hostName = "unKnowHostName";
+        String hostIP = "";
+        String hostName = "";
         try {
-            hostIP = HostUtil.getHostIp();
-            hostName = HostUtil.getHostName().replace(".","-");
+            if (endPoint.contains("{host.ip}")) {
+                hostIP = HostUtil.getHostIp();
+            }
+            if (endPoint.contains("{host.name}")) {
+                hostName = HostUtil.getHostName().replace(".","-");
+            }
         } catch (Exception e) {
             log.error("获取系统Host信息失败",e);
         }
