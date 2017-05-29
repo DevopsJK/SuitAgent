@@ -17,7 +17,7 @@
 
     <fileSets>
         <fileSet>
-            <directory>${project.basedir}/src/main/resources_ext/bin/noJar</directory>
+            <directory>${project.basedir}/src/main/resources_ext/bin</directory>
             <filtered>true</filtered>
             <fileMode>0755</fileMode>
             <directoryMode>0755</directoryMode>

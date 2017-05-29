@@ -1,0 +1,40 @@
+/*
+ * www.yiji.com Inc.
+ * Copyright (c) 2016 All Rights Reserved
+ */
+package com.falcon.suitagent.plugins.job;
+/*
+ * 修订记录:
+ * guqiu@yiji.com 2016-06-28 10:45 创建
+ */
+
+import com.falcon.suitagent.falcon.ReportMetrics;
+import com.falcon.suitagent.plugins.JDBCPlugin;
+import com.falcon.suitagent.plugins.metrics.JDBCMetricsValue;
+import com.falcon.suitagent.plugins.metrics.MetricsCommon;
+import lombok.extern.slf4j.Slf4j;
+import org.quartz.Job;
+import org.quartz.JobDataMap;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+
+/**
+ * @author guqiu@yiji.com
+ */
+@Slf4j
+public class JDBCPluginJob implements Job{
+
+    @Override
+    public void execute(JobExecutionContext context) throws JobExecutionException {
+        long timestamp = System.currentTimeMillis() / 1000;
+        JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
+        String pluginName = jobDataMap.getString("pluginName");
+        try {
+            JDBCPlugin jdbcPlugin = (JDBCPlugin) jobDataMap.get("pluginObject");
+            MetricsCommon jdbcMetricsValue = new JDBCMetricsValue(jdbcPlugin,timestamp);
+            ReportMetrics.push(jdbcMetricsValue.getReportObjects());
+        } catch (Exception e) {
+            log.error("插件 {} 运行异常",pluginName,e);
+        }
+    }
+}
