@@ -11,14 +11,14 @@ package com.falcon.suitagent.plugins.plugin.standalone;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.falcon.suitagent.falcon.CounterType;
+import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
 import com.falcon.suitagent.plugins.JMXPlugin;
 import com.falcon.suitagent.plugins.Plugin;
+import com.falcon.suitagent.plugins.metrics.MetricsCommon;
 import com.falcon.suitagent.plugins.util.PluginActivateType;
 import com.falcon.suitagent.util.*;
 import com.falcon.suitagent.vo.HttpResult;
-import com.falcon.suitagent.falcon.FalconReportObject;
-import com.falcon.suitagent.plugins.metrics.MetricsCommon;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -215,8 +215,16 @@ public class StandaloneJarPlugin implements JMXPlugin {
      */
     @Override
     public void init(Map<String, String> properties) {
-        jmxServerDir = properties.get("jmxServerDir");
-        jmxServerName = properties.get("jmxServerName");
+        if (!StringUtils.isEmpty(System.getProperty("jmxServerDir"))){
+            jmxServerDir = System.getProperty("jmxServerDir");
+        }else {
+            jmxServerDir = properties.get("jmxServerDir");
+        }
+        if (!StringUtils.isEmpty(System.getProperty("jmxServerName"))){
+            jmxServerName = System.getProperty("jmxServerName");
+        }else {
+            jmxServerName = properties.get("jmxServerName");
+        }
         step = Integer.parseInt(properties.get("step"));
         pluginActivateType = PluginActivateType.valueOf(properties.get("pluginActivateType"));
     }

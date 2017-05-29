@@ -26,7 +26,7 @@ import java.util.Map;
  * @author guqiu@yiji.com
  */
 @Slf4j
-public class YijiNTPPlugin implements DetectPlugin {
+public class NTPPlugin implements DetectPlugin {
 
     private int step;
     private String address;
@@ -40,6 +40,17 @@ public class YijiNTPPlugin implements DetectPlugin {
     @Override
     public String agentSignName(String address) {
         return null;
+    }
+
+    /**
+     * 该插件在指定插件配置目录下的配置文件名
+     *
+     * @return 返回该插件对应的配置文件名
+     * 默认值:插件简单类名第一个字母小写 加 .properties 后缀
+     */
+    @Override
+    public String configFileName() {
+        return "NTPPlugin.properties";
     }
 
     /**
