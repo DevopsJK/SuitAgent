@@ -105,8 +105,8 @@ public class NTPPlugin implements DetectPlugin {
      *
      * @param properties 包含的配置:
      *                   1、插件目录绝对路径的(key 为 pluginDir),可利用此属性进行插件自定制资源文件读取
-     *                   2、插件指定的配置文件的全部配置信息(参见 {@link Plugin#configFileName()} 接口项)
-     *                   3、授权配置项(参见 {@link Plugin#authorizationKeyPrefix()} 接口项
+     *                   2、插件指定的配置文件的全部配置信息(参见 {@link com.falcon.suitagent.plugins.Plugin#configFileName} 接口项)
+     *                   3、授权配置项(参见 {@link com.falcon.suitagent.plugins.Plugin#authorizationKeyPrefix} 接口项
      */
     @Override
     public void init(Map<String, String> properties) {
