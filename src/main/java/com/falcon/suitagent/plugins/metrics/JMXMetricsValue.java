@@ -346,7 +346,6 @@ public class JMXMetricsValue extends MetricsCommon {
         falconReportObject.setTimestamp(metricsValueInfo.getTimestamp());
         falconReportObject.appendTags(getTags(name, jmxPlugin, jmxPlugin.serverName()));
 
-        List<JMXObjectNameInfo> jmxObjectNameInfos = new ArrayList<>();
         metricsValueInfo.getJmxObjectNameInfoList().stream().
                 filter(jmxObjectNameInfo -> jmxObjectNameInfo.getObjectName().toString().contains("java.lang:type=GarbageCollector"))
                 .forEach(jmxObjectNameInfo -> {
