@@ -4,15 +4,15 @@
  */
 package com.falcon.suitagent.plugins.metrics;
 
-import com.falcon.suitagent.jmx.JMXConnection;
-import com.falcon.suitagent.plugins.JMXPlugin;
-import com.falcon.suitagent.plugins.util.CacheUtil;
 import com.falcon.suitagent.exception.JMXUnavailabilityType;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.falcon.FalconReportObject;
+import com.falcon.suitagent.jmx.JMXConnection;
 import com.falcon.suitagent.jmx.vo.JMXConnectionInfo;
 import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
 import com.falcon.suitagent.jmx.vo.JMXObjectNameInfo;
+import com.falcon.suitagent.plugins.JMXPlugin;
+import com.falcon.suitagent.plugins.util.CacheUtil;
 import com.falcon.suitagent.util.MapUtil;
 import com.falcon.suitagent.util.Maths;
 import com.falcon.suitagent.util.StringUtils;
@@ -20,6 +20,7 @@ import com.falcon.suitagent.vo.jmx.JMXMetricsConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
 
+import javax.management.ObjectName;
 import javax.management.openmbean.CompositeDataSupport;
 import java.io.File;
 import java.io.IOException;
@@ -337,7 +338,15 @@ public class JMXMetricsValue extends MetricsCommon {
             return result;
         }
 
-        List<GarbageCollectorMXBean> garbageCollectorMXBeans = ManagementFactory.getGarbageCollectorMXBeans();
+        List<GarbageCollectorMXBean> garbageCollectorMXBeans = new ArrayList<>();
+        try {
+            ObjectName gcName = new ObjectName(ManagementFactory.GARBAGE_COLLECTOR_MXBEAN_DOMAIN_TYPE + ",*");
+            for (ObjectName name : metricsValueInfo.getJmxConnectionInfo().getMBeanServerConnection().queryNames(gcName, null)) {
+                garbageCollectorMXBeans.add(ManagementFactory.newPlatformMXBeanProxy(metricsValueInfo.getJmxConnectionInfo().getMBeanServerConnection(), name.getCanonicalName(), GarbageCollectorMXBean.class));
+            }
+        } catch (Exception e) {
+            log.error("获取GC mBean发生异常",e);
+        }
         FalconReportObject falconReportObject = new FalconReportObject();
         //服务的标识后缀名
         String name = metricsValueInfo.getJmxConnectionInfo().getName();
