@@ -20,13 +20,9 @@ import com.falcon.suitagent.vo.jmx.JMXMetricsConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
 
-import javax.management.MBeanServerConnection;
-import javax.management.ObjectName;
 import javax.management.openmbean.CompositeDataSupport;
 import java.io.File;
 import java.io.IOException;
-import java.lang.management.GarbageCollectorMXBean;
-import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,8 +42,8 @@ public class JMXMetricsValue extends MetricsCommon {
 
     private JMXPlugin jmxPlugin;
     private List<JMXMetricsValueInfo> jmxMetricsValueInfos;
-    private final static ConcurrentHashMap<String,String> serverDirNameCatch = new ConcurrentHashMap<>();
-    private final static ConcurrentHashMap<String,String> serverDirPathCatch = new ConcurrentHashMap<>();
+    private final static ConcurrentHashMap<String, String> serverDirNameCatch = new ConcurrentHashMap<>();
+    private final static ConcurrentHashMap<String, String> serverDirPathCatch = new ConcurrentHashMap<>();
 
     /**
      * JMX监控值
@@ -77,7 +73,7 @@ public class JMXMetricsValue extends MetricsCommon {
      */
     private Set<KitObjectNameMetrics> getKitObjectNameMetrics(Collection<JMXObjectNameInfo> jmxObjectNameInfos, JMXMetricsConfiguration metricsConfiguration) {
         Set<KitObjectNameMetrics> kitObjectNameMetricsSet = new HashSet<>();
-        if(jmxObjectNameInfos != null){
+        if (jmxObjectNameInfos != null) {
             for (JMXObjectNameInfo jmxObjectNameInfo : jmxObjectNameInfos) {
                 String objectName = jmxObjectNameInfo.getObjectName().toString();
                 Map<String, Object> metricsMap = jmxObjectNameInfo.getMetricsValue();
@@ -164,25 +160,25 @@ public class JMXMetricsValue extends MetricsCommon {
     }
 
 
-    private String getServerDirPath(int pid,String serverName){
+    private String getServerDirPath(int pid, String serverName) {
         String key = serverName + pid;
         String serverDirPath = CacheUtil.getCacheValue(serverDirPathCatch.get(key));
-        if(serverDirPath == null){
-            serverDirPath = jmxPlugin.serverPath(pid,serverName);
-            if(!StringUtils.isEmpty(serverDirPath)){
-                serverDirPathCatch.put(key,CacheUtil.setCacheValue(serverDirPath));
+        if (serverDirPath == null) {
+            serverDirPath = jmxPlugin.serverPath(pid, serverName);
+            if (!StringUtils.isEmpty(serverDirPath)) {
+                serverDirPathCatch.put(key, CacheUtil.setCacheValue(serverDirPath));
             }
         }
         return serverDirPath;
     }
 
-    private String getServerDirName(int pid,String serverName){
+    private String getServerDirName(int pid, String serverName) {
         String key = serverName + pid;
         String dirName = CacheUtil.getCacheValue(serverDirNameCatch.get(key));
-        if(dirName == null){
+        if (dirName == null) {
             dirName = jmxPlugin.serverDirName(pid);
-            if(!StringUtils.isEmpty(dirName)){
-                serverDirNameCatch.put(key,CacheUtil.setCacheValue(dirName));
+            if (!StringUtils.isEmpty(dirName)) {
+                serverDirNameCatch.put(key, CacheUtil.setCacheValue(dirName));
             }
         }
         return dirName;
@@ -190,9 +186,10 @@ public class JMXMetricsValue extends MetricsCommon {
 
     /**
      * 清除JMX连接
+     *
      * @param jmxConnectionInfo
      */
-    private void removeJMXConnectCache(JMXConnectionInfo jmxConnectionInfo){
+    private void removeJMXConnectCache(JMXConnectionInfo jmxConnectionInfo) {
         String key = jmxConnectionInfo.getConnectionServerName() + jmxConnectionInfo.getPid();
         JMXConnection.removeConnectCache(jmxConnectionInfo.getConnectionServerName(), jmxConnectionInfo.getPid());
         jmxConnectionInfo.closeJMXConnector();
@@ -223,7 +220,7 @@ public class JMXMetricsValue extends MetricsCommon {
         //JMX连接清除检查处理
         for (JMXMetricsValueInfo metricsValueInfo : jmxMetricsValueInfos) {
             JMXConnectionInfo jmxConnectionInfo = metricsValueInfo.getJmxConnectionInfo();
-            if(StringUtils.isEmpty(jmxConnectionInfo.getName())){
+            if (StringUtils.isEmpty(jmxConnectionInfo.getName())) {
                 /*
                  * 清除没有agentSignName的JMX连接
                  * 此处是为过滤没有正常采集到数据的采集，防止上报没有用的监控数据
@@ -234,7 +231,7 @@ public class JMXMetricsValue extends MetricsCommon {
                 continue;
             }
             if (jmxConnectionInfo.getPid() != 0 && jmxConnectionInfo.getConnectionServerName() != null) {
-                String serverDirPath = getServerDirPath(jmxConnectionInfo.getPid(),jmxConnectionInfo.getConnectionServerName());
+                String serverDirPath = getServerDirPath(jmxConnectionInfo.getPid(), jmxConnectionInfo.getConnectionServerName());
                 if (!StringUtils.isEmpty(serverDirPath)) {
                     if (serverDirPath.contains(" ")) {
                         log.warn("发现路径: {} 有空格,请及时处理,否则Agent可能会工作不正常", serverDirPath);
@@ -250,22 +247,22 @@ public class JMXMetricsValue extends MetricsCommon {
                 }
             }
 
-            if(!jmxConnectionInfo.isValid()){
+            if (!jmxConnectionInfo.isValid()) {
                 //添加该 jmx不可用的监控报告
-                if(jmxConnectionInfo.getType() == null){
-                    result.add(generatorVariabilityReport(false,jmxConnectionInfo.getName(),metricsValueInfo.getTimestamp(), jmxPlugin.step(), jmxPlugin, jmxPlugin.serverName()));
-                }else {
-                    result.add(generatorVariabilityReport(false,String.valueOf(jmxConnectionInfo.getType().getType()),metricsValueInfo.getTimestamp(), jmxConnectionInfo.getName(), jmxPlugin.step(), jmxPlugin, jmxPlugin.serverName()));
+                if (jmxConnectionInfo.getType() == null) {
+                    result.add(generatorVariabilityReport(false, jmxConnectionInfo.getName(), metricsValueInfo.getTimestamp(), jmxPlugin.step(), jmxPlugin, jmxPlugin.serverName()));
+                } else {
+                    result.add(generatorVariabilityReport(false, String.valueOf(jmxConnectionInfo.getType().getType()), metricsValueInfo.getTimestamp(), jmxConnectionInfo.getName(), jmxPlugin.step(), jmxPlugin, jmxPlugin.serverName()));
                 }
-            }else {
+            } else {
                 //添加可用性报告
-                result.add(generatorVariabilityReport(true, jmxConnectionInfo.getName(),metricsValueInfo.getTimestamp(), jmxPlugin.step(), jmxPlugin, jmxPlugin.serverName()));
+                result.add(generatorVariabilityReport(true, jmxConnectionInfo.getName(), metricsValueInfo.getTimestamp(), jmxPlugin.step(), jmxPlugin, jmxPlugin.serverName()));
             }
 
-            if(jmxConnectionInfo.getMBeanServerConnection() != null
+            if (jmxConnectionInfo.getMBeanServerConnection() != null
                     && jmxConnectionInfo.getCacheKeyId() != null
-                    && jmxConnectionInfo.getConnectionQualifiedServerName() != null){
-                String dirName = getServerDirName(jmxConnectionInfo.getPid(),jmxConnectionInfo.getConnectionServerName());
+                    && jmxConnectionInfo.getConnectionQualifiedServerName() != null) {
+                String dirName = getServerDirName(jmxConnectionInfo.getPid(), jmxConnectionInfo.getConnectionServerName());
                 if (hasContinueReport(jmxConnectionInfo)) {
                     Set<KitObjectNameMetrics> kitObjectNameMetricsSet = new HashSet<>();
                     Set<JMXMetricsConfiguration> jmxMetricsConfigurationSet = metricsValueInfo.getJmxMetricsConfigurations();
@@ -277,13 +274,13 @@ public class JMXMetricsValue extends MetricsCommon {
                     final List<String> noCollects = new ArrayList<>();
                     final List<String> hasCollects = new ArrayList<>();
                     jmxMetricsConfigurationSet.stream().filter(conf -> !conf.isHasCollect()).
-                            forEach(conf -> noCollects.add(String.format("【metrics：%s，alias：%s】",conf.getMetrics(),conf.getAlias())));
+                            forEach(conf -> noCollects.add(String.format("【metrics：%s，alias：%s】", conf.getMetrics(), conf.getAlias())));
                     jmxMetricsConfigurationSet.stream().filter(JMXMetricsConfiguration::isHasCollect).
-                            forEach(conf -> hasCollects.add(String.format("【metrics：%s，alias：%s】",conf.getMetrics(),conf.getAlias())));
-                    if(!noCollects.isEmpty()){
-                        log.warn("当前未采集到的指标({})：{}",noCollects.size(),noCollects);
+                            forEach(conf -> hasCollects.add(String.format("【metrics：%s，alias：%s】", conf.getMetrics(), conf.getAlias())));
+                    if (!noCollects.isEmpty()) {
+                        log.warn("当前未采集到的指标({})：{}", noCollects.size(), noCollects);
                     }
-                    log.warn("当前已采集到的指标({})：{}",hasCollects.size(),hasCollects);
+                    log.warn("当前已采集到的指标({})：{}", hasCollects.size(), hasCollects);
 
                     result.addAll(generatorReportObject(kitObjectNameMetricsSet, metricsValueInfo));
 
@@ -293,7 +290,7 @@ public class JMXMetricsValue extends MetricsCommon {
 
                     //添加插件內建报告
                     Collection<FalconReportObject> inbuilt = jmxPlugin.inbuiltReportObjectsForValid(metricsValueInfo);
-                    if (inbuilt != null && !inbuilt.isEmpty()){
+                    if (inbuilt != null && !inbuilt.isEmpty()) {
                         result.addAll(inbuilt);
                     }
 
@@ -310,15 +307,16 @@ public class JMXMetricsValue extends MetricsCommon {
 
     /**
      * 判断是否继续进行JMX报告获取
+     *
      * @param jmxConnectionInfo
      * @return
      */
-    private boolean hasContinueReport(JMXConnectionInfo jmxConnectionInfo){
+    private boolean hasContinueReport(JMXConnectionInfo jmxConnectionInfo) {
         JMXUnavailabilityType type = jmxConnectionInfo.getType();
-        if(jmxConnectionInfo.isValid()){
+        if (jmxConnectionInfo.isValid()) {
             //可用，返回true
             return true;
-        }else if(!jmxConnectionInfo.isValid() && type != null && type != JMXUnavailabilityType.connectionFailed){
+        } else if (!jmxConnectionInfo.isValid() && type != null && type != JMXUnavailabilityType.connectionFailed) {
             //不可用，但是并不是连接失败，返回true，上报已经采集到的值
             return true;
         }
@@ -327,29 +325,19 @@ public class JMXMetricsValue extends MetricsCommon {
 
     /**
      * 获取GC监控报告
+     *
      * @param metricsValueInfo
      * @return
      */
-    private Collection<FalconReportObject> getGCReportObject(JMXMetricsValueInfo metricsValueInfo){
+    private Collection<FalconReportObject> getGCReportObject(JMXMetricsValueInfo metricsValueInfo) {
         List<FalconReportObject> result = new ArrayList<>();
         if (metricsValueInfo == null) {
             return result;
         }
-        if(!metricsValueInfo.getJmxConnectionInfo().isValid() && metricsValueInfo.getJmxConnectionInfo().getType() == JMXUnavailabilityType.connectionFailed){
+        if (!metricsValueInfo.getJmxConnectionInfo().isValid() && metricsValueInfo.getJmxConnectionInfo().getType() == JMXUnavailabilityType.connectionFailed) {
             return result;
         }
 
-        List<GarbageCollectorMXBean> garbageCollectorMXBeans = new ArrayList<>();
-        try {
-
-            ObjectName gcName = new ObjectName(ManagementFactory.GARBAGE_COLLECTOR_MXBEAN_DOMAIN_TYPE + ",*");
-            for (ObjectName name : metricsValueInfo.getJmxConnectionInfo().getMBeanServerConnection().queryNames(gcName, null)) {
-                MBeanServerConnection mBeanServerConnection = metricsValueInfo.getJmxConnectionInfo().getJmxConnector().getMBeanServerConnection();
-                garbageCollectorMXBeans.add(ManagementFactory.newPlatformMXBeanProxy(mBeanServerConnection, name.getCanonicalName(), GarbageCollectorMXBean.class));
-            }
-        } catch (Exception e) {
-            log.error("获取GC mBean发生异常",e);
-        }
         FalconReportObject falconReportObject = new FalconReportObject();
         //服务的标识后缀名
         String name = metricsValueInfo.getJmxConnectionInfo().getName();
@@ -357,17 +345,25 @@ public class JMXMetricsValue extends MetricsCommon {
         falconReportObject.setCounterType(CounterType.GAUGE);
         falconReportObject.setTimestamp(metricsValueInfo.getTimestamp());
         falconReportObject.appendTags(getTags(name, jmxPlugin, jmxPlugin.serverName()));
-        for (GarbageCollectorMXBean garbageCollectorMXBean : garbageCollectorMXBeans) {
-            falconReportObject.setObjectName(garbageCollectorMXBean.getObjectName());
 
-            falconReportObject.setMetric(getMetricsName(String.format("GC-%s-CollectionCount",garbageCollectorMXBean.getName().replace(" ",""))));
-            falconReportObject.setValue(String.valueOf(garbageCollectorMXBean.getCollectionCount()));
-            result.add(falconReportObject.clone());
+        List<JMXObjectNameInfo> jmxObjectNameInfos = new ArrayList<>();
+        metricsValueInfo.getJmxObjectNameInfoList().stream().
+                filter(jmxObjectNameInfo -> jmxObjectNameInfo.getObjectName().toString().contains("java.lang:type=GarbageCollector"))
+                .forEach(jmxObjectNameInfo -> {
+                    falconReportObject.setObjectName(jmxObjectNameInfo.getObjectName());
 
-            falconReportObject.setMetric(getMetricsName(String.format("GC-%s-CollectionTime",garbageCollectorMXBean.getName().replace(" ",""))));
-            falconReportObject.setValue(String.valueOf(garbageCollectorMXBean.getCollectionTime()));
-            result.add(falconReportObject.clone());
-        }
+                    falconReportObject.setMetric(getMetricsName(String.format("GC-%s-CollectionCount",
+                            jmxObjectNameInfo.getMetricsValue().get("Name")).replace(" ", "")));
+                    falconReportObject.setValue(String.valueOf(jmxObjectNameInfo.getMetricsValue().get("CollectionCount")));
+                    result.add(falconReportObject.clone());
+
+                    falconReportObject.setMetric(getMetricsName(String.format("GC-%s-CollectionTime",
+                            jmxObjectNameInfo.getMetricsValue().get("Name")).replace(" ", "")));
+                    falconReportObject.setValue(String.valueOf(jmxObjectNameInfo.getMetricsValue().get("CollectionTime")));
+                    result.add(falconReportObject.clone());
+                });
+
+
         return result;
     }
 
@@ -389,7 +385,7 @@ public class JMXMetricsValue extends MetricsCommon {
         if (metricsValueInfo == null) {
             return result;
         }
-        if(!metricsValueInfo.getJmxConnectionInfo().isValid() && metricsValueInfo.getJmxConnectionInfo().getType() == JMXUnavailabilityType.connectionFailed){
+        if (!metricsValueInfo.getJmxConnectionInfo().isValid() && metricsValueInfo.getJmxConnectionInfo().getType() == JMXUnavailabilityType.connectionFailed) {
             return result;
         }
         boolean hasHeapCollect = false;
@@ -458,7 +454,7 @@ public class JMXMetricsValue extends MetricsCommon {
                         result.add(falconReportObject.clone());
                     }
 
-                }else if("java.lang:type=MemoryPool,name=Metaspace".equals(objectNameInfo.getObjectName().toString())){
+                } else if ("java.lang:type=MemoryPool,name=Metaspace".equals(objectNameInfo.getObjectName().toString())) {
                     hasMetaCollect = true;
                     MemoryUsage metaspaceUsage = MemoryUsage.from((CompositeDataSupport) objectNameInfo.getMetricsValue().get("Usage"));
 
@@ -490,15 +486,15 @@ public class JMXMetricsValue extends MetricsCommon {
                 }
             }
 
-            if (!hasHeapCollect){
+            if (!hasHeapCollect) {
                 log.warn("此次可能因监控值超时原因，堆内存的相关信息未能采集到。");
             }
-            if(!hasMetaCollect){
+            if (!hasMetaCollect) {
                 log.warn("JDK版本小于8或元空间参数未设置或可能因监控值采集超时等原因，元空间内存的相关信息未能采集到");
             }
 
         } catch (Exception e) {
-            log.error("获取 {} jmx 内置监控数据异常:{}",metricsValueInfo.getJmxConnectionInfo().getName() ,e.getMessage());
+            log.error("获取 {} jmx 内置监控数据异常:{}", metricsValueInfo.getJmxConnectionInfo().getName(), e.getMessage());
         }
         return result;
     }

@@ -88,6 +88,8 @@ public class JMXManager {
                                         }else if(objectName.contains("java.lang:type=Memory") ||
                                                 objectName.contains("java.lang:type=MemoryPool,name=Metaspace")){
                                             return true;
+                                        }else if (objectName.contains("java.lang:type=GarbageCollector")){
+                                            return true;
                                         }else{
                                             for (JMXMetricsConfiguration configuration : jmxMetricsConfigurationSet) {
                                                 if(objectName.contains(configuration.getObjectName())){
