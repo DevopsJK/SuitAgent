@@ -110,7 +110,6 @@ public class AbstractJmxCommand {
                 remoteUrlInfo.setAuthentication(isAuth);
 
                 if(isAuth){
-//                    String suffix = ".YijiFalconAgent";
                     //寻找JMX的认证信息
                     if(accessFile == null || passwordFile == null){
                         String javaHome = CommandUtilForUnix.getJavaHomeFromEtcProfile();
