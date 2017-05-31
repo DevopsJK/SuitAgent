@@ -20,6 +20,7 @@ import com.falcon.suitagent.vo.jmx.JMXMetricsConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
 
+import javax.management.MBeanServerConnection;
 import javax.management.ObjectName;
 import javax.management.openmbean.CompositeDataSupport;
 import java.io.File;
@@ -340,9 +341,11 @@ public class JMXMetricsValue extends MetricsCommon {
 
         List<GarbageCollectorMXBean> garbageCollectorMXBeans = new ArrayList<>();
         try {
+
             ObjectName gcName = new ObjectName(ManagementFactory.GARBAGE_COLLECTOR_MXBEAN_DOMAIN_TYPE + ",*");
             for (ObjectName name : metricsValueInfo.getJmxConnectionInfo().getMBeanServerConnection().queryNames(gcName, null)) {
-                garbageCollectorMXBeans.add(ManagementFactory.newPlatformMXBeanProxy(metricsValueInfo.getJmxConnectionInfo().getMBeanServerConnection(), name.getCanonicalName(), GarbageCollectorMXBean.class));
+                MBeanServerConnection mBeanServerConnection = metricsValueInfo.getJmxConnectionInfo().getJmxConnector().getMBeanServerConnection();
+                garbageCollectorMXBeans.add(ManagementFactory.newPlatformMXBeanProxy(mBeanServerConnection, name.getCanonicalName(), GarbageCollectorMXBean.class));
             }
         } catch (Exception e) {
             log.error("获取GC mBean发生异常",e);
