@@ -340,6 +340,13 @@
             <version>1.16.12</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.rabbitmq</groupId>
+            <artifactId>amqp-client</artifactId>
+            <version>4.1.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>
