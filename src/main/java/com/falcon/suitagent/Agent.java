@@ -67,7 +67,6 @@ public class Agent extends Thread{
 
         try {
             this.agentServerStart(AgentConfiguration.INSTANCE.getAgentPort());
-            this.agentWebServerStart(AgentConfiguration.INSTANCE.getAgentWebPort());
         } catch (IOException e) {
             log.error("Agent启动失败",e);
         }
@@ -150,6 +149,7 @@ public class Agent extends Thread{
         });
 
         work();
+        this.agentWebServerStart(AgentConfiguration.INSTANCE.getAgentWebPort());
 
         //阻塞式方式进行客户端连接操作,连接成功后,单独启动线程进行客户端的读写操作
         for(;;){
