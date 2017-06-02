@@ -12,6 +12,7 @@ import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.plugins.JDBCPlugin;
 import com.falcon.suitagent.plugins.metrics.MetricsCommon;
+import org.apache.commons.lang.math.NumberUtils;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -103,7 +104,7 @@ class Metrics {
         while (rs.next()){
             String metric = rs.getString(1);
             String value = rs.getString(2);
-            try {
+            if (NumberUtils.isNumber(value)){
                 //收集值为数字的结果
                 long v = Long.parseLong(value);
                 FalconReportObject falconReportObject = new FalconReportObject();
@@ -114,9 +115,7 @@ class Metrics {
                 falconReportObject.setValue(v + "");
                 falconReportObject.appendTags(MetricsCommon.getTags(plugin.agentSignName(),plugin,plugin.serverName()));
                 reportObjectSet.add(falconReportObject);
-            } catch (NumberFormatException ignored) {
             }
-
         }
         rs.close();
         pstmt.close();
@@ -134,17 +133,18 @@ class Metrics {
         PreparedStatement pstmt = connection.prepareStatement(sql);
         ResultSet rs = pstmt.executeQuery();
         while (rs.next()){
-            String metric = rs.getString(1);
             String value = rs.getString(2);
-
-            FalconReportObject falconReportObject = new FalconReportObject();
-            MetricsCommon.setReportCommonValue(falconReportObject,plugin.step());
-            falconReportObject.setCounterType(CounterType.GAUGE);
-            falconReportObject.setTimestamp(System.currentTimeMillis() / 1000);
-            falconReportObject.setMetric(metric);
-            falconReportObject.setValue(value);
-            falconReportObject.appendTags(MetricsCommon.getTags(plugin.agentSignName(),plugin,plugin.serverName()));
-            reportObjectSet.add(falconReportObject);
+            if (NumberUtils.isNumber(value)){
+                String metric = rs.getString(1);
+                FalconReportObject falconReportObject = new FalconReportObject();
+                MetricsCommon.setReportCommonValue(falconReportObject,plugin.step());
+                falconReportObject.setCounterType(CounterType.GAUGE);
+                falconReportObject.setTimestamp(System.currentTimeMillis() / 1000);
+                falconReportObject.setMetric(metric);
+                falconReportObject.setValue(value);
+                falconReportObject.appendTags(MetricsCommon.getTags(plugin.agentSignName(),plugin,plugin.serverName()));
+                reportObjectSet.add(falconReportObject);
+            }
         }
         rs.close();
         pstmt.close();
