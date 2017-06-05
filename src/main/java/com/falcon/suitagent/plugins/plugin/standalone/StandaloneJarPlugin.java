@@ -215,13 +215,13 @@ public class StandaloneJarPlugin implements JMXPlugin {
      */
     @Override
     public void init(Map<String, String> properties) {
-        if (!StringUtils.isEmpty(System.getProperty("jmxServerDir"))){
-            jmxServerDir = System.getProperty("jmxServerDir");
+        if (!StringUtils.isEmpty(System.getProperty("plugin.jar.jmxServerDir"))){
+            jmxServerDir = System.getProperty("plugin.jar.jmxServerDir");
         }else {
             jmxServerDir = properties.get("jmxServerDir");
         }
-        if (!StringUtils.isEmpty(System.getProperty("jmxServerName"))){
-            jmxServerName = System.getProperty("jmxServerName");
+        if (!StringUtils.isEmpty(System.getProperty("plugin.jar.jmxServerName"))){
+            jmxServerName = System.getProperty("plugin.jar.jmxServerName");
         }else {
             jmxServerName = properties.get("jmxServerName");
         }
