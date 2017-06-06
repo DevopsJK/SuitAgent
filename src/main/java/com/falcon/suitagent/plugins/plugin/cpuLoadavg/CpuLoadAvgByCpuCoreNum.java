@@ -120,10 +120,11 @@ public class CpuLoadAvgByCpuCoreNum implements DetectPlugin{
             avg15Min = Maths.div(avg15Min,cpuNum,3);
 
             List<DetectResult.Metric> metricList = new ArrayList<>();
+            String tag = "coreNum=" + cpuNum;
             Collections.addAll(metricList,
-                    new DetectResult.Metric("cpuCoreNum.loadAvg.1",String.valueOf(avg1Min), CounterType.GAUGE,""),
-                    new DetectResult.Metric("cpuCoreNum.loadAvg.5",String.valueOf(avg5Min), CounterType.GAUGE,""),
-                    new DetectResult.Metric("cpuCoreNum.loadAvg.15",String.valueOf(avg15Min), CounterType.GAUGE,"")
+                    new DetectResult.Metric("cpuCoreNum.loadAvg.1",String.valueOf(avg1Min), CounterType.GAUGE,tag),
+                    new DetectResult.Metric("cpuCoreNum.loadAvg.5",String.valueOf(avg5Min), CounterType.GAUGE,tag),
+                    new DetectResult.Metric("cpuCoreNum.loadAvg.15",String.valueOf(avg15Min), CounterType.GAUGE,tag)
             );
             detectResult.setMetricsList(metricList);
             detectResult.setSuccess(true);
