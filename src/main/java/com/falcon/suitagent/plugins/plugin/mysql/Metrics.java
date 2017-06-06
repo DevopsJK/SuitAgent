@@ -106,13 +106,12 @@ class Metrics {
             String value = rs.getString(2);
             if (NumberUtils.isNumber(value)){
                 //收集值为数字的结果
-                long v = Long.parseLong(value);
                 FalconReportObject falconReportObject = new FalconReportObject();
                 MetricsCommon.setReportCommonValue(falconReportObject,plugin.step());
                 falconReportObject.setCounterType(CounterType.GAUGE);
                 falconReportObject.setTimestamp(System.currentTimeMillis() / 1000);
                 falconReportObject.setMetric(metric);
-                falconReportObject.setValue(v + "");
+                falconReportObject.setValue(value);
                 falconReportObject.appendTags(MetricsCommon.getTags(plugin.agentSignName(),plugin,plugin.serverName()));
                 reportObjectSet.add(falconReportObject);
             }
