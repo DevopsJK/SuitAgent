@@ -50,10 +50,9 @@ if [ $2 ]; then
 fi
 
 client_cmd="${JAVA} \
-	-server -Xms64m -Xmx256m -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m -XX:SurvivorRatio=4 -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:LargePageSizeInBytes=128m \
-	-XX:+UseFastAccessorMethods -XX:+UseCMSInitiatingOccupancyOnly -XX:CMSInitiatingOccupancyFraction=70 -XX:+UseParNewGC -XX:MaxTenuringThreshold=5 -XX:+CMSClassUnloadingEnabled \
-	-XX:+TieredCompilation -XX:+ExplicitGCInvokesConcurrent -XX:AutoBoxCacheMax=20000 \
-	-verbosegc  -XX:+PrintGCDateStamps -XX:+PrintGCDetails -Xloggc:${agentHome}/logs/gc.log \
+	-server -Xms64m -Xmx256m -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m -XX:SurvivorRatio=4 -XX:LargePageSizeInBytes=128m \
+	-XX:+UseFastAccessorMethods -XX:MaxTenuringThreshold=5 \
+	-XX:+TieredCompilation -XX:AutoBoxCacheMax=20000 \
 	-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${agentHome}/logs/oom-${START_DATE}.hprof \
 	-Dagent.conf.path=${agentHome}/conf/agent.properties \
 	-Dauthorization.conf.path=${agentHome}/conf/authorization.properties \
