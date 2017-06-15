@@ -12,15 +12,15 @@ import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.plugins.JDBCPlugin;
 import com.falcon.suitagent.plugins.metrics.MetricsCommon;
+import com.falcon.suitagent.util.Maths;
 import org.apache.commons.lang.math.NumberUtils;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 监控值收集
@@ -30,6 +30,24 @@ class Metrics {
 
     private JDBCPlugin plugin;
     private Connection connection;
+    /**
+     * 需要采集相对变化量的指标
+     */
+    private static List<String> RALATIVE_METRICS =
+            Arrays.asList(
+                    "Slow_queries",
+                    "Com_delete",
+                    "Com_update",
+                    "Com_insert",
+                    "Com_commit",
+                    "Com_rollback",
+                    "Threads_connected",
+                    "Created_tmp_tables"
+            );
+    /**
+     * 相对变化量数据记录
+     */
+    private static ConcurrentHashMap<String,Number> metricsHistoryValueForRelative = new ConcurrentHashMap<>();
 
     Metrics(JDBCPlugin plugin,Connection connection) {
         this.plugin = plugin;
@@ -48,6 +66,31 @@ class Metrics {
 //        reportObjectSet.addAll(getInnodbStatus());
         reportObjectSet.addAll(getSalveStatus());
 
+        //相对变化量的指标
+        Set<FalconReportObject> counterObj = new HashSet<>();
+        reportObjectSet.forEach(falconReportObject -> {
+            String metrics = falconReportObject.getMetric();
+            if (RALATIVE_METRICS.contains(metrics)){
+                Number previousValue = metricsHistoryValueForRelative.get(metrics);
+                if (previousValue == null){
+                    previousValue = NumberUtils.createNumber(falconReportObject.getValue());
+                    //保存此次的值
+                    metricsHistoryValueForRelative.put(metrics,previousValue);
+                }else {
+                    FalconReportObject reportObject = falconReportObject.clone();
+                    reportObject.setMetric(metrics + "_Relative");
+                    //添加本次与上一次监控值的相对值
+                    reportObject.setValue(String.valueOf(Maths.sub(NumberUtils.createDouble(falconReportObject.getValue()),previousValue.doubleValue())));
+                    //保存此次监控值为历史值
+                    metricsHistoryValueForRelative.put(metrics,NumberUtils.createDouble(falconReportObject.getValue()));
+                    counterObj.add(reportObject);
+                }
+
+
+            }
+        });
+
+        reportObjectSet.addAll(counterObj);
         return reportObjectSet;
     }
 
