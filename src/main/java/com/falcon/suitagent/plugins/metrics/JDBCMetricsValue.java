@@ -5,11 +5,12 @@
 package com.falcon.suitagent.plugins.metrics;
 
 import com.falcon.suitagent.config.AgentConfiguration;
-import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.plugins.JDBCPlugin;
+import com.falcon.suitagent.util.Maths;
 import com.falcon.suitagent.util.PropertiesUtil;
+import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.vo.jdbc.JDBCConnectionInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
@@ -35,6 +36,26 @@ public class JDBCMetricsValue extends MetricsCommon {
     private JDBCPlugin jdbcPlugin;
     private long timestamp;
     private static final ConcurrentHashMap<Object,String> urlTagCatch = new ConcurrentHashMap<>();
+
+    /**
+     * 需要采集相对变化量的指标
+     */
+    private static List<String> MYSQL_RALATIVE_METRICS =
+            Arrays.asList(
+                    "Slow_queries",
+                    "Com_delete",
+                    "Com_update",
+                    "Com_insert",
+                    "Com_commit",
+                    "Com_rollback",
+                    "Threads_connected",
+                    "Created_tmp_tables"
+            );
+    /**
+     * 相对变化量数据记录
+     */
+    private static ConcurrentHashMap<String,Number> metricsHistoryValueForRelative = new ConcurrentHashMap<>();
+
 
     public JDBCMetricsValue(JDBCPlugin jdbcPlugin, long timestamp) {
         this.jdbcPlugin = jdbcPlugin;
@@ -146,6 +167,35 @@ public class JDBCMetricsValue extends MetricsCommon {
                 } catch (Exception e) {
                     log.warn("连接JDBC异常,创建不可用报告", e);
                     result.add(getVariabilityReport(false, connectionInfo));
+                }
+
+                //添加相对值指标
+                if ("mysql".equals(jdbcPlugin.serverName())){
+                    Set<FalconReportObject> counterObj = new HashSet<>();
+                    result.forEach(falconReportObject -> {
+                        String metrics = falconReportObject.getMetric();
+                        String metricsKey = metrics + connectionInfo.getUrl();
+                        if (MYSQL_RALATIVE_METRICS.contains(metrics)){
+                            Number previousValue = metricsHistoryValueForRelative.get(metricsKey);
+                            if (previousValue == null){
+                                previousValue = NumberUtils.createNumber(falconReportObject.getValue());
+                                //保存此次的值
+                                metricsHistoryValueForRelative.put(metricsKey,previousValue);
+                            }else {
+                                FalconReportObject reportObject = falconReportObject.clone();
+                                reportObject.setMetric(metrics + "_Relative");
+                                //添加本次与上一次监控值的相对值
+                                reportObject.setValue(String.valueOf(Maths.sub(NumberUtils.createDouble(falconReportObject.getValue()),previousValue.doubleValue())));
+                                //保存此次监控值为历史值
+                                metricsHistoryValueForRelative.put(metricsKey,NumberUtils.createDouble(falconReportObject.getValue()));
+                                counterObj.add(reportObject);
+                            }
+
+
+                        }
+                    });
+
+                    result.addAll(counterObj);
                 }
             }
         }
