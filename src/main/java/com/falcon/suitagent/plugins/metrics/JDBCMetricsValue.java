@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /*
  * 修订记录:
@@ -33,6 +34,7 @@ import java.util.*;
 public class JDBCMetricsValue extends MetricsCommon {
     private JDBCPlugin jdbcPlugin;
     private long timestamp;
+    private static final ConcurrentHashMap<Object,String> urlTagCatch = new ConcurrentHashMap<>();
 
     public JDBCMetricsValue(JDBCPlugin jdbcPlugin, long timestamp) {
         this.jdbcPlugin = jdbcPlugin;
@@ -60,9 +62,16 @@ public class JDBCMetricsValue extends MetricsCommon {
      * @param connectionInfo
      */
     private void addURLTag(FalconReportObject falconReportObject, JDBCConnectionInfo connectionInfo) {
-        falconReportObject.appendTags("url=" + connectionInfo.getUrl()
-                .replace("jdbc:mysql://","")
-                .replace("jdbc:oracle:thin:@",""));
+        String tag = urlTagCatch.get(connectionInfo);
+        if (tag == null){
+            tag = "url=" + connectionInfo.getUrl()
+                    .replace("jdbc:mysql://","")
+                    .replace("jdbc:oracle:thin:@","");
+            falconReportObject.appendTags(tag);
+            urlTagCatch.put(connectionInfo,tag);
+        }else {
+            falconReportObject.appendTags(tag);
+        }
     }
 
     /**
