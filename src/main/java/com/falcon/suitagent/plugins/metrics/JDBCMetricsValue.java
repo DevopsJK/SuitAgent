@@ -49,7 +49,9 @@ public class JDBCMetricsValue extends MetricsCommon {
                     "Com_commit",
                     "Com_rollback",
                     "Threads_connected",
-                    "Created_tmp_tables"
+                    "Created_tmp_tables",
+                    "Table_locks_waited",
+                    "Innodb_row_lock_waits"
             );
     /**
      * 相对变化量数据记录
