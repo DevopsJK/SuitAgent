@@ -51,7 +51,7 @@ public interface DetectPlugin extends Plugin {
 
     /**
      * 无需配置该属性,此类插件pluginActivateType属性将不起作用
-     * 运行方式见 {@link DetectPlugin#detectAddressCollection()}
+     * 运行方式见  {@link DetectPlugin#autoDetectAddress()} 以及 {@link DetectPlugin#detectAddressCollection()}
      *
      * 插件运行方式
      *
