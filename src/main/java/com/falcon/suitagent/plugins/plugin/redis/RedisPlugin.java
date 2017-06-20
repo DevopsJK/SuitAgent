@@ -31,7 +31,6 @@ import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.vo.detect.DetectResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
