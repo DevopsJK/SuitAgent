@@ -24,13 +24,13 @@ package com.falcon.suitagent.plugins.plugin.redis;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.plugins.DetectPlugin;
 import com.falcon.suitagent.plugins.Plugin;
-import com.falcon.suitagent.util.CommandUtilForUnix;
-import com.falcon.suitagent.util.FileUtil;
-import com.falcon.suitagent.util.Maths;
-import com.falcon.suitagent.util.StringUtils;
+import com.falcon.suitagent.util.*;
 import com.falcon.suitagent.vo.detect.DetectResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
+
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -136,7 +136,13 @@ public class RedisPlugin implements DetectPlugin {
      */
     @Override
     public String agentSignName(String address) {
-        return address.replace(":","-");
+        String agentSignName = address.replace(":","-");
+        try {
+            String ip = HostUtil.getHostIp();
+            agentSignName = agentSignName.replace("0.0.0.0",ip).replace("127.0.0.1",ip).replace("localhost",ip);
+        } catch (Exception ignored) {
+        }
+        return agentSignName;
     }
 
     /**
