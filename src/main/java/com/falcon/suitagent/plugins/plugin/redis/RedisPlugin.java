@@ -212,8 +212,7 @@ public class RedisPlugin implements DetectPlugin {
      * @param address
      * @return
      */
-    public static List<DetectResult.Metric> getInfoMetrics(Map<String, String> map, String address){
-        //TODO 测试完后改方法可见属性
+    private List<DetectResult.Metric> getInfoMetrics(Map<String, String> map, String address){
         List<DetectResult.Metric> metricList = new ArrayList<>();
         //运行天数
         addMetrics(metricList,map,"uptime_in_days",CounterType.GAUGE,"");
@@ -354,13 +353,12 @@ public class RedisPlugin implements DetectPlugin {
      * @param address
      * @return
      */
-    private static List<DetectResult.Metric> getRelativeMetrics(List<DetectResult.Metric> metricList, String address){
-        //TODO 测试完后修改方法可见性
+    private List<DetectResult.Metric> getRelativeMetrics(List<DetectResult.Metric> metricList, String address){
         List<DetectResult.Metric> relativeMetrics = new ArrayList<>();
         if (metricList != null){
             metricList.forEach(metric -> {
                 String metricKey = metric.metricName + address;
-                if (REDIS_RELATIVE_METRICS.contains(metricKey)){
+                if (REDIS_RELATIVE_METRICS.contains(metric.metricName)){
                     Number previousValue = metricsHistoryValueForRelative.get(metricKey);
                     if (previousValue == null){
                         previousValue = NumberUtils.createNumber(metric.value);
