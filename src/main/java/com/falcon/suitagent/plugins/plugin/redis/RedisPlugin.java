@@ -29,8 +29,6 @@ import com.falcon.suitagent.vo.detect.DetectResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
 
-import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -136,13 +134,20 @@ public class RedisPlugin implements DetectPlugin {
      */
     @Override
     public String agentSignName(String address) {
-        String agentSignName = address.replace(":","-");
         try {
+            String addr = address.split(" ")[1];
+            String agentSignName = addr.replace(":","-");
             String ip = HostUtil.getHostIp();
-            agentSignName = agentSignName.replace("0.0.0.0",ip).replace("127.0.0.1",ip).replace("localhost",ip);
-        } catch (Exception ignored) {
+            agentSignName = agentSignName.
+                    replace("0.0.0.0",ip).
+                    replace("127.0.0.1",ip).
+                    replace("localhost",ip).
+                    replace("*",ip);
+            return agentSignName;
+        } catch (Exception e) {
+            log.error("",e);
         }
-        return agentSignName;
+        return null;
     }
 
     /**
@@ -155,21 +160,23 @@ public class RedisPlugin implements DetectPlugin {
     public DetectResult detectResult(String address) {
         DetectResult detectResult = new DetectResult();
         try {
-            String ip = address.split("\\:")[0];
+            String redisCli = address.split(" ")[0].replace("redis-server","");
+            redisCli += "redis-cli";
+//            String ip = address.split("\\:")[0];
             String port = address.split("\\:")[1];
 
             String cmd4Ping;
             if (redisPortToConfMap.get(port) == null){
-                cmd4Ping = String.format("redis-cli -h %s -p %s ping",ip,port);
+                cmd4Ping = String.format("%s -p %s ping",redisCli,port);
             }else {
-                cmd4Ping = String.format("redis-cli -a %s -h %s -p %s ping",getRedisPasswordFromConfFile(redisPortToConfMap.get(port)),ip,port);
+                cmd4Ping = String.format("%s -a %s -p %s ping",redisCli,getRedisPasswordFromConfFile(redisPortToConfMap.get(port)),port);
             }
 
             String cmd4Info;
             if (redisPortToConfMap.get(port) == null){
-                cmd4Info = String.format("redis-cli -h %s -p %s info",ip,port);
+                cmd4Info = String.format("%s -p %s info",redisCli,port);
             }else {
-                cmd4Info = String.format("redis-cli -a %s -h %s -p %s info",getRedisPasswordFromConfFile(redisPortToConfMap.get(port)),ip,port);
+                cmd4Info = String.format("%s -a %s -p %s info",redisCli,getRedisPasswordFromConfFile(redisPortToConfMap.get(port)),port);
             }
 
             boolean detectSuccess = false;
@@ -428,13 +435,13 @@ public class RedisPlugin implements DetectPlugin {
     @Override
     public Collection<String> autoDetectAddress() {
         List<String> redisAddresses = new ArrayList<>();
-        String cmd = "ps aux | grep redis-server| grep -v grep|awk '{print $NF}'";
+        String cmd = "ps aux | grep redis-server| grep -v grep|awk '{print $11 \" \" $12}'";
         try {
             CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
             if(executeResult.isSuccess){
                 for (String result : executeResult.msg.split("\n")) {
-                    if (result.split(":").length != 2){
-                        log.warn("探测到的Redis地址格式非{IP:Port}形式，将跳过此采集：{}",result.trim());
+                    if (result.split(" ").length != 2 && result.split(":").length != 2){
+                        log.warn("探测到的Redis地址格式非{Cmd IP:Port}形式，将跳过此采集：{}",result.trim());
                         continue;
                     }
                     redisAddresses.add(result.trim());
