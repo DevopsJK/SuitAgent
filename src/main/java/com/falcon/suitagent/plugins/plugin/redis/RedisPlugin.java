@@ -59,7 +59,8 @@ public class RedisPlugin implements DetectPlugin {
                     "keyspace_hits",
                     "keyspace_misses",
                     "pubsub_channels",
-                    "pubsub_patterns"
+                    "pubsub_patterns",
+                    "role"
             );
     /**
      * 相对变化量数据记录
