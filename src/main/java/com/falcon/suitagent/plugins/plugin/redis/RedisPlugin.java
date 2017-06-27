@@ -29,6 +29,7 @@ import com.falcon.suitagent.vo.detect.DetectResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
 
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -161,8 +162,22 @@ public class RedisPlugin implements DetectPlugin {
     public DetectResult detectResult(String address) {
         DetectResult detectResult = new DetectResult();
         try {
-            String redisCli = address.split(" ")[0].replace("redis-server","");
-            redisCli += "redis-cli";
+            String redisCli = "";
+            CommandUtilForUnix.ExecuteResult cli = CommandUtilForUnix.execWithReadTimeLimit("whereis redis-cli",false,7);
+            String cliPath = address.split(" ")[0].replace("redis-server","redis-cli");
+            File cliFile = new File(cliPath);
+            if(cliFile.exists()){
+                redisCli = cliPath;
+            }else if (!StringUtils.isEmpty(cli.msg.replace("redis-cli:","").trim())){
+                redisCli = "redis-cli";
+            }
+
+            if ("".equals(redisCli)){
+                detectResult.setSuccess(false);
+                log.error("系统PATH中未找到 redis-cli 命令，且 redis-server 没有用绝对路径方式启动：{}。请将redis-cli加入系统PATH或以️绝对路径方式启动redis-server",address.split(" ")[0]);
+                return detectResult;
+            }
+
 //            String ip = address.split("\\:")[0];
             String port = address.split("\\:")[1];
 
