@@ -205,7 +205,6 @@ class Metrics {
                                             String fileName = file.getFileName().toString();
                                             String fileNameLower = fileName.toLowerCase();
                                             if(fileNameLower.endsWith(".myi") || fileNameLower.endsWith(".ibd")){
-                                                //TODO 上报文件大小
                                                 FalconReportObject falconReportObject = new FalconReportObject();
                                                 MetricsCommon.setReportCommonValue(falconReportObject,plugin.step());
                                                 falconReportObject.setCounterType(CounterType.GAUGE);
