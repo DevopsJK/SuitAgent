@@ -156,7 +156,7 @@ public class JDBCMetricsValue extends MetricsCommon {
                         if (inbuilt != null) {
                             for (FalconReportObject falconReportObject : inbuilt) {
                                 addURLTag(falconReportObject, connectionInfo);
-                                //同一时间戳
+                                //统一时间戳
                                 falconReportObject.setTimestamp(timestamp);
                                 result.add(falconReportObject);
                             }

@@ -24,7 +24,9 @@ package com.falcon.suitagent.util;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 
 /**
  * @author long.qian@msxf.com
@@ -100,6 +102,34 @@ public class HostUtil {
         if ("127.0.0.1".equals(ipAddress)){
             log.warn("本机IP的局域网地址获取可能失败（返回默认的127.0.0.1），当前系统环境：{}",osName);
         }
+        return ipAddress;
+    }
+
+    /**
+     * 获取本机所有的IP地址（不包括127.0.0.1等IP地址）
+     * @return
+     * @throws UnknownHostException
+     */
+    public static List<String> getHostIps() throws UnknownHostException, SocketException {
+        List<String> ipAddress = new ArrayList<>();
+        Enumeration allNetInterfaces = NetworkInterface.getNetworkInterfaces();
+        InetAddress ip;
+        while (allNetInterfaces.hasMoreElements())
+        {
+            NetworkInterface netInterface = (NetworkInterface) allNetInterfaces.nextElement();
+            Enumeration addresses = netInterface.getInetAddresses();
+            while (addresses.hasMoreElements())
+            {
+                ip = (InetAddress) addresses.nextElement();
+                if (ip != null && ip instanceof Inet4Address)
+                {
+                    if (!ip.getHostAddress().startsWith("127.0.0.1") && !ip.getHostAddress().startsWith("localhost")){
+                        ipAddress.add(ip.getHostAddress());
+                    }
+                }
+            }
+        }
+
         return ipAddress;
     }
 }

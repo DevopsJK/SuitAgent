@@ -8,7 +8,6 @@ package com.falcon.suitagent.plugins.plugin.oracle;
  * guqiu@yiji.com 2016-06-28 11:07 创建
  */
 
-import com.falcon.suitagent.plugins.Plugin;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.plugins.JDBCPlugin;
@@ -180,7 +179,8 @@ public class OraclePlugin implements JDBCPlugin {
             FalconReportObject falconReportObject = new FalconReportObject();
             MetricsCommon.setReportCommonValue(falconReportObject,step());
             falconReportObject.setCounterType(CounterType.GAUGE);
-            falconReportObject.setTimestamp(System.currentTimeMillis() / 1000);
+            //时间戳会统一上报
+//            falconReportObject.setTimestamp(System.currentTimeMillis() / 1000);
             falconReportObject.appendTags(MetricsCommon.getTags(agentSignName(),this,serverName()))
                     .appendTags("TSName=" + tsName.trim());
 
