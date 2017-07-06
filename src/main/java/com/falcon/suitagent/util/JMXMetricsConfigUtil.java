@@ -55,7 +55,7 @@ public class JMXMetricsConfigUtil {
             try (FileInputStream in = new FileInputStream(propertiesPath)) {
                 Properties properties = new Properties();
                 properties.load(in);
-                for (int i = 1; i <= 100; i++) {
+                for (int i = 1; i <= 200; i++) {
                     String objectName = basePropertiesKey + i + ".objectName";
                     if (!StringUtils.isEmpty(properties.getProperty(objectName))) {
                         JMXMetricsConfiguration metricsConfiguration = new JMXMetricsConfiguration();
