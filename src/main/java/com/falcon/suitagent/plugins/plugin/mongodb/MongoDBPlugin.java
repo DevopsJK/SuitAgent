@@ -177,18 +177,27 @@ public class MongoDBPlugin implements DetectPlugin {
      */
     @Override
     public Collection<String> autoDetectAddress() {
-        List<String> adds = new ArrayList<>();
+        Set<String> adds = new HashSet<>();
         try {
             String binPath = getMongoBinPath();
             if (binPath != null){
+                //命令行Post信息
+                Set<String> ports = getPortsFromPs();
+                //命令行配置文件的Port信息
                 Set<String> confs = getRunConfFilesFromPs();
                 for (String conf : confs) {
                     String port = getPortFromConfFile(conf);
+                    if (port == null){
+                        log.warn("从配置文件{}未找到MongoDB的启动端口",conf);
+                    }else {
+                        ports.add(port);
+                    }
+                }
+
+                for (String port : ports) {
                     if (port != null){
                         //返回格式 BinPath:-->:Port
                         adds.add(binPath + ":-->:" + port);
-                    }else {
-                        log.warn("从配置文件{}未找到MongoDB的启动端口",conf);
                     }
                 }
             }
@@ -236,6 +245,30 @@ public class MongoDBPlugin implements DetectPlugin {
     }
 
     /**
+     * 从ps命令获取端口
+     * @return
+     */
+    private Set<String> getPortsFromPs(){
+        Set<String> ports = new HashSet<>();
+        try {
+            CommandUtilForUnix.ExecuteResult ps = CommandUtilForUnix.execWithReadTimeLimit("ps aux | grep mongo",false,5);
+            for (String s : ps.msg.split("\n")) {
+                if (s.contains("--port=")){
+                    String s1 = s.substring(s.indexOf("--port="));
+                    ports.add(s1.split("\\s+")[0].replace("--port=",""));
+                }
+                if (s.contains("--port ")){
+                    String s1 = s.substring(s.indexOf("--port "));
+                    ports.add(s1.split("\\s+")[1]);
+                }
+            }
+        } catch (IOException e) {
+            log.error("",e);
+        }
+        return ports;
+    }
+
+    /**
      * 从ps命令结果中解析所有启动的MongoDB的配置文件地址
      * @return
      */
@@ -248,9 +281,17 @@ public class MongoDBPlugin implements DetectPlugin {
                     String s1 = s.substring(s.indexOf("-f "));
                     confs.add(s1.split("\\s+")[1]);
                 }
+                if (s.contains("-f=")){
+                    String s1 = s.substring(s.indexOf("-f="));
+                    confs.add(s1.split("\\s+")[0].replace("-f=",""));
+                }
                 if (s.contains("--config ")){
                     String s1 = s.substring(s.indexOf("--config "));
                     confs.add(s1.split("\\s+")[1]);
+                }
+                if (s.contains("--config=")){
+                    String s1 = s.substring(s.indexOf("--config="));
+                    confs.add(s1.split("\\s+")[0].replace("--config=",""));
                 }
             }
         } catch (IOException e) {
