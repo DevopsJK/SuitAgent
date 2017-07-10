@@ -12,14 +12,17 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.plugins.DetectPlugin;
-import com.falcon.suitagent.plugins.Plugin;
 import com.falcon.suitagent.util.CommandUtilForUnix;
 import com.falcon.suitagent.util.JSONUtil;
 import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.vo.detect.DetectResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
+import org.ho.yaml.Yaml;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -108,7 +111,12 @@ public class MongoDBPlugin implements DetectPlugin {
         detectResult.setSuccess(false);
 
         try {
-            CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit("echo 'db.serverStatus()' | " + address,false,7);
+            //address格式：BinPath:-->:Port
+            String[] ss = address.split(":-->:");
+            String binPath = ss[0];
+            String port = ss[1];
+            String cmd = String.format("echo 'db.serverStatus()' | %s --port %s",binPath,port);
+            CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
             if(!StringUtils.isEmpty(executeResult.msg)){
                 String msg = executeResult.msg;
                 log.debug(msg);
@@ -170,23 +178,110 @@ public class MongoDBPlugin implements DetectPlugin {
      */
     @Override
     public Collection<String> autoDetectAddress() {
+        List<String> adds = new ArrayList<>();
         try {
-            CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(
-                    "whereis mongo",false,5
-            );
-            if(!StringUtils.isEmpty(executeResult.msg)){
-                String msg = executeResult.msg;
-                String[] ss = msg.split("\\s+");
-                for (String s : ss) {
-                    if(s.startsWith("/")){
-                        //返回mongo的命令地址作为启动标志
-                        return Collections.singletonList(s);
+            String binPath = getMongoBinPath();
+            if (binPath != null){
+                Set<String> confs = getRunConfFilesFromPs();
+                for (String conf : confs) {
+                    String port = getPortFromConfFile(conf);
+                    if (port != null){
+                        //返回格式 BinPath:-->:Port
+                        adds.add(binPath + ":-->:" + port);
+                    }else {
+                        log.warn("从配置文件{}未找到MongoDB的启动端口",conf);
                     }
                 }
             }
         } catch (Exception e) {
-            return null;
+            return adds;
+        }
+        return adds;
+    }
+
+    /**
+     * 从配置文件读取端口地址
+     * @param confPath
+     * @return
+     */
+    private String getPortFromConfFile(String confPath){
+        if (confPath != null){
+            try {
+                Map<String,Object> confMap = new HashMap<>();
+                confMap =  Yaml.loadType(new FileInputStream(confPath), HashMap.class);
+                Map<String,Object> netConf = (Map<String, Object>) confMap.get("net");
+                if (netConf != null){
+                    String port = String.valueOf(netConf.get("port"));
+                    if (NumberUtils.isNumber(port)){
+                        return port;
+                    }
+                }
+            } catch (Exception e) {
+                log.error("",e);
+            }
         }
         return null;
+    }
+
+    /**
+     * 从ps命令结果中解析所有启动的MongoDB的配置文件地址
+     * @return
+     */
+    private Set<String> getRunConfFilesFromPs(){
+        Set<String> confs = new HashSet<>();
+        try {
+            CommandUtilForUnix.ExecuteResult ps = CommandUtilForUnix.execWithReadTimeLimit("ps aux | grep mongo",false,5);
+            for (String s : ps.msg.split("\n")) {
+                if (s.contains("-f ")){
+                    String s1 = s.substring(s.indexOf("-f "));
+                    confs.add(s1.split("\\s+")[1]);
+                }
+                if (s.contains("--config ")){
+                    String s1 = s.substring(s.indexOf("--config "));
+                    confs.add(s1.split("\\s+")[1]);
+                }
+            }
+        } catch (IOException e) {
+            log.error("",e);
+        }
+        return confs;
+    }
+
+    /**
+     * 从which或whereis或ps中获取mongo的二进制文件位置
+     * @return
+     */
+    private String getMongoBinPath(){
+        String path = null;
+        try {
+            CommandUtilForUnix.ExecuteResult which = CommandUtilForUnix.execWithReadTimeLimit("which mongo",false,5);
+            if (which.msg.startsWith("/") && which.msg.endsWith("mongo")){
+                path = which.msg;
+            }else {
+                CommandUtilForUnix.ExecuteResult whereIs = CommandUtilForUnix.execWithReadTimeLimit("whereis mongo",false,5);
+                if(!StringUtils.isEmpty(whereIs.msg)){
+                    String msg = whereIs.msg;
+                    String[] ss = msg.split("\\s+");
+                    for (String s : ss) {
+                        if(s.startsWith("/") && s.endsWith("mongo")){
+                            path = s;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (path == null){
+                CommandUtilForUnix.ExecuteResult ps = CommandUtilForUnix.execWithReadTimeLimit("ps aux | grep mongo| grep -v grep|awk '{print $11}'",false,5);
+                for (String s : ps.msg.split("\n")) {
+                    if (s.startsWith("/") && (s.endsWith("mongo") || s.endsWith("mongod"))){
+                        path = s.substring(0,s.lastIndexOf("/")) + File.separator + "mongo";
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("",e);
+        }
+        return path;
     }
 }
