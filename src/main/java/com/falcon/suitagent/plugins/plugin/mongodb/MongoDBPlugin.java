@@ -13,15 +13,14 @@ import com.alibaba.fastjson.JSONObject;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.plugins.DetectPlugin;
 import com.falcon.suitagent.util.CommandUtilForUnix;
+import com.falcon.suitagent.util.FileUtil;
 import com.falcon.suitagent.util.JSONUtil;
 import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.vo.detect.DetectResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
-import org.ho.yaml.Yaml;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
 
@@ -207,13 +206,26 @@ public class MongoDBPlugin implements DetectPlugin {
     private String getPortFromConfFile(String confPath){
         if (confPath != null){
             try {
-                Map<String,Object> confMap = new HashMap<>();
-                confMap =  Yaml.loadType(new FileInputStream(confPath), HashMap.class);
-                Map<String,Object> netConf = (Map<String, Object>) confMap.get("net");
-                if (netConf != null){
-                    String port = String.valueOf(netConf.get("port"));
-                    if (NumberUtils.isNumber(port)){
-                        return port;
+                boolean turnNetConf = false;
+                for (String s : FileUtil.getTextFileContent(confPath).split("\n")) {
+                    if (!s.trim().startsWith("#")){
+                        int end = s.length();
+                        if (s.contains("#")){
+                            end = s.indexOf("#");
+                        }
+                        String str = s.substring(0,end);
+                        if (turnNetConf){
+                            if (str.contains("port:")){
+                                String port = str.replace("port:","").trim();
+                                if (NumberUtils.isNumber(port)){
+                                    return port;
+                                }
+                            }
+                        }else {
+                            if (str.endsWith("net:")){
+                                turnNetConf = true;
+                            }
+                        }
                     }
                 }
             } catch (Exception e) {
