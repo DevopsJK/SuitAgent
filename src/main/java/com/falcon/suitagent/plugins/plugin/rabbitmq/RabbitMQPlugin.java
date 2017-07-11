@@ -2,7 +2,7 @@
  * www.msxf.com Inc.
  * Copyright (c) 2017 All Rights Reserved
  */
-package com.falcon.suitagent.plugins.plugin.rebbitmq;
+package com.falcon.suitagent.plugins.plugin.rabbitmq;
 //             ,%%%%%%%%,
 //           ,%%/\%%%%/\%%
 //          ,%%%\c "" J/%%%
