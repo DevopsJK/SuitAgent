@@ -4,7 +4,9 @@
  */
 package com.falcon.suitagent.util;
 
+import com.falcon.suitagent.common.AgentJobHelper;
 import com.falcon.suitagent.common.SchedulerFactory;
+import com.falcon.suitagent.plugins.Plugin;
 import com.falcon.suitagent.vo.sceduler.ScheduleJobResult;
 import com.falcon.suitagent.vo.sceduler.ScheduleJobStatus;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +14,8 @@ import org.quartz.JobDetail;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.Trigger;
+
+import java.util.List;
 
 /*
  * 修订记录:
@@ -64,4 +68,13 @@ public class SchedulerUtil {
         return scheduleJobResult;
     }
 
+    public static ScheduleJobResult getResultByPlugin(Plugin plugin){
+        List<ScheduleJobResult> scheduleResults = AgentJobHelper.scheduleResults;
+        for (ScheduleJobResult scheduleResult : scheduleResults) {
+            if (scheduleResult.getTriggerKey().getName().equals(plugin.pluginName() + "-agent-scheduler-trigger")){
+                return scheduleResult;
+            }
+        }
+        return null;
+    }
 }

@@ -21,7 +21,9 @@ import com.falcon.suitagent.vo.snmp.SNMPV3UserInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 import static org.quartz.TriggerBuilder.newTrigger;
@@ -39,6 +41,8 @@ public class AgentJobHelper {
 
     //正在work的job记录
     private static final ConcurrentSkipListSet<String> worked = new ConcurrentSkipListSet<>();
+
+    public static final List<ScheduleJobResult> scheduleResults = new ArrayList<>();
 
     /**
      * 添加work记录
@@ -72,6 +76,7 @@ public class AgentJobHelper {
 
             Trigger trigger = getTrigger(AgentConfiguration.INSTANCE.getAgentFlushTime(),agentFlush,"Agent监控服务自动发现定时刷新push调度任务");
             ScheduleJobResult scheduleJobResult = SchedulerUtil.executeScheduleJob(job,trigger);
+            scheduleResults.add(scheduleJobResult);
             workResult(scheduleJobResult,agentFlush);
         }else{
             log.info("Agent监控服务自动发现定时刷新功能未开启");
@@ -202,6 +207,7 @@ public class AgentJobHelper {
         JobDetail job = getJobDetail(jobClazz,desc,desc + "的监控数据push调度JOB",jobDataMap);
         Trigger trigger = getTrigger(step,desc,desc + "的监控数据push调度任务");
         ScheduleJobResult scheduleJobResult = SchedulerUtil.executeScheduleJob(job,trigger);
+        scheduleResults.add(scheduleJobResult);
         workResult(scheduleJobResult,serverName);
     }
 
