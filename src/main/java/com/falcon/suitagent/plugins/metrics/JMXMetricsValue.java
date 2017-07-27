@@ -223,7 +223,7 @@ public class JMXMetricsValue extends MetricsCommon {
             if (StringUtils.isEmpty(jmxConnectionInfo.getName())) {
                 /*
                  * 清除没有agentSignName的JMX连接
-                 * 此处是为过滤没有正常采集到数据的采集，防止上报没有用的监控数据
+                 * 过滤没有正常采集到数据的采集，以及下掉的K8S中JMX连接
                  * 注：没有实现agentSignName方法的插件会默认打上NO NAME的字符串，且并不会上传此tag
                  */
 

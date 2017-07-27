@@ -10,8 +10,11 @@ package com.falcon.suitagent.plugins;
 
 import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
+import com.falcon.suitagent.vo.jmx.JMXExecuteCommandInfo;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * JMX 插件接口
@@ -32,6 +35,17 @@ public interface JMXPlugin extends Plugin{
      * @return
      */
     String jmxServerName();
+
+    /**
+     * Java应用启动时的命令信息的列表集合
+     * 若实现该接口，则该方法中返回描述的Java应用将会自动建立JMX连接进行监控
+     * @return
+     * 请勿返回null
+     * 默认返回空集合
+     */
+    default List<JMXExecuteCommandInfo> commandInfos(){
+        return new ArrayList<>();
+    }
 
     /**
      * 该插件监控的服务标记名称,目的是为能够在操作系统中准确定位该插件监控的是哪个具体服务

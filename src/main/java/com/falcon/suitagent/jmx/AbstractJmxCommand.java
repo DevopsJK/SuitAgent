@@ -44,6 +44,8 @@ public class AbstractJmxCommand {
 
     /**
      * 通过进程id查找JMX的remote连接地址
+     * @param command
+     * 指定命令行信息（若传null，则从pid中自动获取命令行）
      * @param pid
      * 查找的进行id
      * @param ip
@@ -51,8 +53,12 @@ public class AbstractJmxCommand {
      * @return
      * 返回查找的JMX连接地址对象或查找失败返回Null
      */
-    public static JMXConnectUrlInfo findJMXRemoteUrlByProcessId(int pid, String ip){
-        log.info("JMX Remote Target Pid:{}", pid);
+    public static JMXConnectUrlInfo findJMXRemoteUrlByProcessId(String command,int pid, String ip){
+        if (StringUtils.isEmpty(command)){
+            log.info("JMX Remote Target Pid:{}", pid);
+        }else {
+            log.info("已指定JMX Command:{}",command);
+        }
         String cmdForMac = "ps u -p " + pid;
         String cmdForLinux = "cat /proc/" + pid + "/cmdline";
         String jmxPortOpt = "-Dcom.sun.management.jmxremote.port";
@@ -63,91 +69,77 @@ public class AbstractJmxCommand {
         try {
             JMXConnectUrlInfo remoteUrlInfo = new JMXConnectUrlInfo();
 
-            CommandUtilForUnix.ExecuteResult result = new CommandUtilForUnix.ExecuteResult(false,false,"");
-            if (OSUtil.isLinux()){
-                result = CommandUtilForUnix.execWithReadTimeLimit(cmdForLinux,false,7);
-            }else if (OSUtil.isMac()){
-                result = CommandUtilForUnix.execWithReadTimeLimit(cmdForMac,false,7);
-            }else {
-                log.error("JMX连接自动获取只支持Linux和Mac平台");
-                return null;
-            }
+            String msg;
 
-            if(result.isSuccess){
-                String msg = result.msg;
-
-                String port = null;
+            if (StringUtils.isEmpty(command)){
+                CommandUtilForUnix.ExecuteResult result;
                 if (OSUtil.isLinux()){
-                    port = getJMXConfigValueForLinux(msg,jmxPortOpt + "=\\d+",jmxPortOpt + "=");
+                    result = CommandUtilForUnix.execWithReadTimeLimit(cmdForLinux,false,7);
                 }else if (OSUtil.isMac()){
-                    port = getJMXConfigValueForMac(msg,jmxPortOpt);
-                }
-                if(port == null){
-                    log.warn("从启动命令未找到JMX Remote 配置:{}",msg);
+                    result = CommandUtilForUnix.execWithReadTimeLimit(cmdForMac,false,7);
+                }else {
+                    log.error("JMX连接自动获取只支持Linux和Mac平台");
                     return null;
                 }
-
-                String accessFile = null;
-                String passwordFile = null;
-                if (OSUtil.isLinux()){
-                    String fileRegex = "(/\\w*[\\u2E80-\\u9FFF]*\\d*-*\\w*[\\u2E80-\\u9FFF]*\\d*_*\\w*[\\u2E80-\\u9FFF]*\\d*\\.*\\w*[\\u2E80-\\u9FFF]*\\d*/){1}(\\w*[\\u2E80-\\u9FFF]*\\d*-*\\w*[\\u2E80-\\u9FFF]*\\d*_*\\w*[\\u2E80-\\u9FFF]*\\d*\\.*\\w*[\\u2E80-\\u9FFF]*\\d*/)*\\w*[\\u2E80-\\u9FFF]*\\d*-*\\w*[\\u2E80-\\u9FFF]*\\d*_*\\w*[\\u2E80-\\u9FFF]*\\d*(\\.*\\w*[\\u2E80-\\u9FFF]*\\d*)*";
-                    accessFile = getJMXConfigValueForLinux(msg,jmxRemoteAccessOpt + "=" + fileRegex,jmxRemoteAccessOpt + "=");
-                    passwordFile = getJMXConfigValueForLinux(msg,jmxRemotePasswordOpt + "=" + fileRegex,jmxRemotePasswordOpt + "=");
-                }else if (OSUtil.isMac()){
-                    accessFile = getJMXConfigValueForMac(msg,jmxRemoteAccessOpt);
-                    passwordFile = getJMXConfigValueForMac(msg,jmxRemotePasswordOpt);
+                if (!result.isSuccess){
+                    log.error("命令 {} 执行失败",cmdForLinux);
+                    return null;
                 }
+                msg = result.msg;
+            }else {
+                msg = command;
+            }
 
-                boolean isAuth = false;
-
-                if (OSUtil.isLinux()){
-                    isAuth = "true".equalsIgnoreCase(getJMXConfigValueForLinux(msg,authPortOpt + "=(false|true|FALSE|TRUE|False|True){1}",authPortOpt + "="));
-                }else if (OSUtil.isMac()){
-                    isAuth = "true".equalsIgnoreCase(getJMXConfigValueForMac(msg,authPortOpt));
-                }
-
-                remoteUrlInfo.setRemoteUrl("service:jmx:rmi:///jndi/rmi://" + ip + ":" + port + "/jmxrmi");
-                remoteUrlInfo.setAuthentication(isAuth);
-
-                if(isAuth){
-                    //寻找JMX的认证信息
-                    if(accessFile == null || passwordFile == null){
-                        String javaHome = CommandUtilForUnix.getJavaHomeFromEtcProfile();
-
-                        if(StringUtils.isEmpty(javaHome)){
-                            log.error("JAVA_HOME 读取失败");
-                            return null;
-                        }
-
-                        log.info("JAVA_HOME : {}",javaHome);
-                        if(accessFile == null){
-                            accessFile = javaHome + "/" + "jre/lib/management/jmxremote.access";
-                        }
-                        if(passwordFile == null){
-                            passwordFile = javaHome + "/" + "jre/lib/management/jmxremote.password";
-                        }
-
-                    }
-
-                    String contentForAccess = CommandUtilForUnix.execWithReadTimeLimit(String.format("cat %s",accessFile),false,7).msg;
-                    String user = getJmxUser(contentForAccess);
-                    String contentForPassword = CommandUtilForUnix.execWithReadTimeLimit(String.format("cat %s",passwordFile),false,7).msg;
-                    String password = getJmxPassword(contentForPassword,user);
-
-                    if(StringUtils.isEmpty(user) || StringUtils.isEmpty(password)){
-                        log.error("JMX Remote 的认证User {} 或 Password {} 获取失败",user,password);
-                    }
-
-                    remoteUrlInfo.setJmxUser(user);
-                    remoteUrlInfo.setJmxPassword(password);
-
-                }
-
-            }else{
-                log.error("命令 {} 执行失败",cmdForLinux);
+            String port = getJMXConfigValueForLinux(msg,jmxPortOpt + "=\\d+",jmxPortOpt + "=");
+            if(port == null){
+                log.warn("从启动命令未找到JMX Remote 配置:{}",msg);
                 return null;
             }
 
+            String accessFile;
+            String passwordFile;
+            String fileRegex = "(/\\w*[\\u2E80-\\u9FFF]*\\d*-*\\w*[\\u2E80-\\u9FFF]*\\d*_*\\w*[\\u2E80-\\u9FFF]*\\d*\\.*\\w*[\\u2E80-\\u9FFF]*\\d*/){1}(\\w*[\\u2E80-\\u9FFF]*\\d*-*\\w*[\\u2E80-\\u9FFF]*\\d*_*\\w*[\\u2E80-\\u9FFF]*\\d*\\.*\\w*[\\u2E80-\\u9FFF]*\\d*/)*\\w*[\\u2E80-\\u9FFF]*\\d*-*\\w*[\\u2E80-\\u9FFF]*\\d*_*\\w*[\\u2E80-\\u9FFF]*\\d*(\\.*\\w*[\\u2E80-\\u9FFF]*\\d*)*";
+            accessFile = getJMXConfigValueForLinux(msg,jmxRemoteAccessOpt + "=" + fileRegex,jmxRemoteAccessOpt + "=");
+            passwordFile = getJMXConfigValueForLinux(msg,jmxRemotePasswordOpt + "=" + fileRegex,jmxRemotePasswordOpt + "=");
+
+            boolean isAuth = "true".equalsIgnoreCase(getJMXConfigValueForLinux(msg,authPortOpt + "=(false|true|FALSE|TRUE|False|True){1}",authPortOpt + "="));
+
+            remoteUrlInfo.setRemoteUrl("service:jmx:rmi:///jndi/rmi://" + ip + ":" + port + "/jmxrmi");
+            remoteUrlInfo.setAuthentication(isAuth);
+
+            if(isAuth){
+                //寻找JMX的认证信息
+                if(accessFile == null || passwordFile == null){
+                    String javaHome = CommandUtilForUnix.getJavaHomeFromEtcProfile();
+
+                    if(StringUtils.isEmpty(javaHome)){
+                        log.error("JAVA_HOME 读取失败");
+                        return null;
+                    }
+
+                    log.info("JAVA_HOME : {}",javaHome);
+                    if(accessFile == null){
+                        accessFile = javaHome + "/" + "jre/lib/management/jmxremote.access";
+                    }
+                    if(passwordFile == null){
+                        passwordFile = javaHome + "/" + "jre/lib/management/jmxremote.password";
+                    }
+
+                }
+
+                String contentForAccess = CommandUtilForUnix.execWithReadTimeLimit(String.format("cat %s",accessFile),false,7).msg;
+                String user = getJmxUser(contentForAccess);
+                String contentForPassword = CommandUtilForUnix.execWithReadTimeLimit(String.format("cat %s",passwordFile),false,7).msg;
+                String password = getJmxPassword(contentForPassword,user);
+
+                if(StringUtils.isEmpty(user) || StringUtils.isEmpty(password)){
+                    log.error("JMX Remote 的认证User {} 或 Password {} 获取失败",user,password);
+                }
+
+                remoteUrlInfo.setJmxUser(user);
+                remoteUrlInfo.setJmxPassword(password);
+
+            }
             return remoteUrlInfo;
         } catch (Exception e) {
             log.error("JMX Remote Url 获取异常",e);
@@ -165,29 +157,6 @@ public class AbstractJmxCommand {
             result = matcher.group().replace(replace,"");
         }
         return result;
-    }
-
-    private static String getJMXConfigValueForMac(String msg,String cmdKey){
-        StringTokenizer st = new StringTokenizer(msg," ",false);
-        while( st.hasMoreElements() ) {
-            String split = st.nextToken();
-            if(!StringUtils.isEmpty(split)){
-                if(split.contains(cmdKey)){
-                    return getConfigValue(split);
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 获取形如 config.key=value 配置项的value
-     * @param config
-     * @return
-     */
-    private static String getConfigValue(String config){
-        String[] ss = config.split("=");
-        return ss[ss.length - 1].trim();
     }
 
     /**
