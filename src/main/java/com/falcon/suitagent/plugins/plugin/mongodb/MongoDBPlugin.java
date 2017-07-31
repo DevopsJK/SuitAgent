@@ -307,6 +307,7 @@ public class MongoDBPlugin implements DetectPlugin {
     private String getMongoBinPath(){
         String path = null;
         try {
+            //which或whereis
             CommandUtilForUnix.ExecuteResult which = CommandUtilForUnix.execWithReadTimeLimit("which mongo",false,5);
             if (which.msg.startsWith("/") && which.msg.endsWith("mongo")){
                 path = which.msg;
@@ -323,12 +324,31 @@ public class MongoDBPlugin implements DetectPlugin {
                     }
                 }
             }
+            //ps
             if (path == null){
                 CommandUtilForUnix.ExecuteResult ps = CommandUtilForUnix.execWithReadTimeLimit("ps aux | grep mongo| grep -v grep|awk '{print $11}'",false,5);
                 for (String s : ps.msg.split("\n")) {
                     if (s.startsWith("/") && (s.endsWith("mongo") || s.endsWith("mongod"))){
                         path = s.substring(0,s.lastIndexOf("/")) + File.separator + "mongo";
                         break;
+                    }
+                }
+            }
+            //PATH
+            if (path == null){
+                CommandUtilForUnix.ExecuteResult env = CommandUtilForUnix.execWithReadTimeLimit("echo $PATH",false,5);
+                for (String s : env.msg.split(":")) {
+                    File file = new File(s);
+                    if (file.exists() && file.isDirectory()){
+                        String[] files = file.list();
+                        if (files != null) {
+                            for (String file1 : files) {
+                                if (file1.equals("mongo")){
+                                    path = s + File.separator + file1;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }
