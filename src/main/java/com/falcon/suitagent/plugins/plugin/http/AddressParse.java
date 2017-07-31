@@ -54,11 +54,13 @@ class AddressParse {
      * 解析失败返回null
      */
     static Address parseAddress(String address){
+        //get:https:www.baidu.com[tag1=tag1Value;tag2=tag2Value]
         String[] ss = address.split(":");
-        if(ss.length != 3){
-            return null;
+        int end = address.length();
+        if (address.contains("[")){
+            end = address.indexOf("[");
         }
-        return new Address(ss[0],ss[1],ss[2]);
+        return new Address(ss[0],ss[1],address.substring(address.indexOf(ss[1]) + ss[1].length() + 1,end));
     }
 
 }
