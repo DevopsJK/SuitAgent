@@ -1,0 +1,11 @@
+# Created by .ignore support plugin (hsz.mobi)
+/src/
+/.idea/
+/.gitignore
+/*.iml
+/target/
+!/target/falcon-agent*
+/LICENSE
+/NOTICE
+/pom.xml
+/*.md

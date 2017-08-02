@@ -1,9 +1,9 @@
 FROM ubuntu
 MAINTAINER long.qian@msxf.com
 WORKDIR /opt
-ADD ../target/falcon-agent-linux64.tar.gz .
-COPY agent.cfg.json .
-COPY agent.sh .
+ADD target/falcon-agent-linux64.tar.gz .
+COPY Docker/agent.cfg.json .
+COPY Docker/agent.sh .
 
 ENV TZ=Asia/Shanghai
 
