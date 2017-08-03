@@ -13,8 +13,10 @@ RUN apk update \
 	&& ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
 	&& rm -rf falcon-agent/conf/falcon/agent.cfg.json \
 	&& rm -rf falcon-agent/bin/agent.sh \
-	&& mv agent.cfg.json falcon-agent/conf/falcon/ \
-	&& mv agent.sh falcon-agent/bin/
+	&& cp agent.cfg.json falcon-agent/conf/falcon/ \
+	&& cp agent.sh falcon-agent/bin/ \
+	&& rm -rf agent.cfg.json \
+	&& rm -rf agent.sh
 
 ENV LANG zh_CN.UTF-8
 ENV LANGUAGE zh_CN:zh
