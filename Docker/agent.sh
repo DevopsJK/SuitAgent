@@ -64,6 +64,8 @@ client_cmd="${JAVA} \
 	-Dagent.falcon.conf.dir=${agentHome}/conf/falcon \
 	-Dagent.home.dir=${agentHome} \
 	-Dfile.encoding=UTF-8 \
+	-Dfile.encoding=UTF-8 \
+	-Druntime.docker=true \
 	-cp ${agent_classpath} ${agent_class} ${CMD}
 "
 

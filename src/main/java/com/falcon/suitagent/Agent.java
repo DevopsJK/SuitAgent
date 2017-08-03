@@ -101,6 +101,9 @@ public class Agent extends Thread{
                 log.error("Agent 启动失败 - Falcon Agent配置文件:{} 在目录:{} 下未找到,请确定配置文件是否正确配置",falconAgentConfFileName,AgentConfiguration.INSTANCE.getFalconConfDir());
                 System.exit(0);
             }
+            if (AgentConfiguration.INSTANCE.isDockerRuntime()){
+                log.info("当前运行环境为 Docker Container");
+            }
             String falconAgentConfContent = FileUtil.getTextFileContent(falconAgentConfFile);
             //将"hostname": "", 配置替换为与SuitAgent相同的Endpoint配置
             falconAgentConfContent = falconAgentConfContent.replaceAll("\"hostname\"\\s*:\\s*\"\"\\s*,",String.format("\"hostname\": \"%s\",",getEndpointByTrans(AgentConfiguration.INSTANCE.getAgentEndpoint())));
