@@ -7,9 +7,6 @@ COPY Docker/agent.sh .
 
 ENV TZ=Asia/Shanghai
 
-VOLUME /proc /proc_host
-VOLUME /dev /dev_host
-
 RUN apt-get update \
 	&& apt-get upgrade -y \
 	&& ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
