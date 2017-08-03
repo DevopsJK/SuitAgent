@@ -114,6 +114,58 @@
         </profile>
 
         <profile>
+            <id>linux64-noJar-docker</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <version>2.5.5</version>
+                        <executions>  <!--执行器 mvn assembly:assembly-->
+                            <execution>
+                                <id>unix-noJar-docker</id><!--名字任意 -->
+                                <phase>package</phase><!-- 绑定到package生命周期阶段上 -->
+                                <goals>
+                                    <goal>single</goal><!-- 只运行一次 -->
+                                </goals>
+                                <configuration>
+                                    <finalName>falcon-agent</finalName>
+                                    <descriptors> <!--描述文件路径-->
+                                        <descriptor>src/main/assembly/assembly-linux64-noJar-docker.xml</descriptor>
+                                    </descriptors>
+                                </configuration>
+                            </execution>
+                        </executions>
+
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/main/assembly/assembly-linux64-noJar-docker.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+
+                    </plugin>
+                </plugins>
+            </build>
+
+            <activation>
+                <property>
+                    <name>java.vendor</name>
+                    <value>Sun Microsystems Inc.</value>
+                </property>
+            </activation>
+
+            <dependencies>
+                <dependency>
+                    <groupId>com.sun</groupId>
+                    <artifactId>tools</artifactId>
+                    <version>1.8</version>
+                    <scope>system</scope>
+                    <systemPath>${java.home}/../lib/tools.jar</systemPath>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
             <id>osx-noJar</id>
             <build>
                 <plugins>

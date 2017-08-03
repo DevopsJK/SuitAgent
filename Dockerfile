@@ -1,19 +1,16 @@
-FROM ubuntu
+FROM 10.250.250.16/devops/java:8u131-msxf
 MAINTAINER long.qian@msxf.com
 WORKDIR /opt
-ADD target/falcon-agent-linux64.tar.gz .
+ADD target/falcon-agent-linux64-noJar-docker.tar.gz .
 COPY Docker/agent.cfg.json .
 COPY Docker/agent.sh .
 
 ENV TZ=Asia/Shanghai
 
-RUN apt-get update \
-	&& apt-get upgrade -y \
+RUN apk update \
+	&& apk upgrade \
+	&& apk add --update procps bash curl iputils\
 	&& ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
-	&& apt-get -y install language-pack-zh-hans language-pack-zh-hans-base \
-	&& locale \
-	&& DEBIAN_FRONTEND=noninteractive dpkg-reconfigure locales \
-	&& locale-gen zh_CN.UTF-8 \
 	&& rm -rf falcon-agent/conf/falcon/agent.cfg.json \
 	&& rm -rf falcon-agent/bin/agent.sh \
 	&& mv agent.cfg.json falcon-agent/conf/falcon/ \

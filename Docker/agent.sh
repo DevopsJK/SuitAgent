@@ -63,6 +63,7 @@ client_cmd="${JAVA} \
 	-Dagent.falcon.dir=${agentHome}/falcon \
 	-Dagent.falcon.conf.dir=${agentHome}/conf/falcon \
 	-Dagent.home.dir=${agentHome} \
+	-Dfile.encoding=UTF-8 \
 	-cp ${agent_classpath} ${agent_class} ${CMD}
 "
 
