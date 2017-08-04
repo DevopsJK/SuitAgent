@@ -102,7 +102,7 @@ public class K8sJmxPlugin implements JMXPlugin {
      */
     @Override
     public String agentSignName(JMXMetricsValueInfo jmxMetricsValueInfo, int pid) {
-        String appName = jmxMetricsValueInfo.getJmxConnectionInfo().getConnectionServerName();//该值为JMXExecuteCommandInfo.appName
+        String appName = jmxMetricsValueInfo.getJmxConnectionInfo().getConnectionServerName();//该值为JavaExecCommandInfo.appName
         for (JavaExecCommandInfo javaExecCommandInfo : commandInfos()) {
             if (javaExecCommandInfo.getAppName().equals(appName)){
                 //若需要监控的配置中存在此appName，返回appName作为标识名
