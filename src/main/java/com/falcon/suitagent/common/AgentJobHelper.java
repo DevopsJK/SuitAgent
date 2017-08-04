@@ -5,7 +5,7 @@
 package com.falcon.suitagent.common;
 
 import com.falcon.suitagent.config.AgentConfiguration;
-import com.falcon.suitagent.jmx.JMXConnection;
+import com.falcon.suitagent.jmx.JMXUtil;
 import com.falcon.suitagent.plugins.DetectPlugin;
 import com.falcon.suitagent.plugins.JDBCPlugin;
 import com.falcon.suitagent.plugins.JMXPlugin;
@@ -99,7 +99,7 @@ public class AgentJobHelper {
         //只有指定job未启动过的情况下才进行work开启
         if(!isHasWorked(jobServerName)){
             if(jmxPlugin.activateType() == PluginActivateType.AUTO){
-                if(JMXConnection.hasJMXServerInLocal(jmxServerName)){
+                if(JMXUtil.hasJMXServerInLocal(jmxServerName)){
                     //开启本地Java服务监控
                     log.info("发现服务 {} , 启动插件 {} ",jobServerName,pluginName);
                     doJob(JMXPluginJob.class,desc,jmxPlugin.step(),jobDataMap,jobServerName);
