@@ -8,6 +8,7 @@ import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.jmx.JMXConnection;
 import com.falcon.suitagent.plugins.DetectPlugin;
 import com.falcon.suitagent.plugins.JDBCPlugin;
+import com.falcon.suitagent.plugins.JMXPlugin;
 import com.falcon.suitagent.plugins.SNMPV3Plugin;
 import com.falcon.suitagent.plugins.job.JMXPluginJob;
 import com.falcon.suitagent.plugins.util.PluginActivateType;
@@ -85,26 +86,31 @@ public class AgentJobHelper {
 
     /**
      * JMX服务的监控启动
+     * jmxServerName指定为null时才会进行commandInfos监控服务
      * @param pluginName
-     * @param pluginActivateType
-     * @param step
+     * @param jmxPlugin
      * @param desc
-     * @param serverName
+     * @param jobServerName
      * @param jmxServerName
      * @param jobDataMap
      * @throws SchedulerException
      */
-    public synchronized static void pluginWorkForJMX(String pluginName, PluginActivateType pluginActivateType, int step, String desc, String serverName,String jmxServerName, JobDataMap jobDataMap) throws SchedulerException {
+    public synchronized static void pluginWorkForJMX(String pluginName, JMXPlugin jmxPlugin, String desc, String jobServerName, String jmxServerName, JobDataMap jobDataMap) throws SchedulerException {
         //只有指定job未启动过的情况下才进行work开启
-        if(!isHasWorked(serverName)){
-            if(pluginActivateType == PluginActivateType.AUTO){
+        if(!isHasWorked(jobServerName)){
+            if(jmxPlugin.activateType() == PluginActivateType.AUTO){
                 if(JMXConnection.hasJMXServerInLocal(jmxServerName)){
-                    //开启服务监控
-                    log.info("发现服务 {} , 启动插件 {} ",serverName,pluginName);
-                    doJob(JMXPluginJob.class,desc,step,jobDataMap,serverName);
+                    //开启本地Java服务监控
+                    log.info("发现服务 {} , 启动插件 {} ",jobServerName,pluginName);
+                    doJob(JMXPluginJob.class,desc,jmxPlugin.step(),jobDataMap,jobServerName);
                 }
-            }else if(pluginActivateType == PluginActivateType.FORCE){
-                doJob(JMXPluginJob.class,desc,step,jobDataMap,serverName);
+                if (jmxServerName == null && !jmxPlugin.commandInfos().isEmpty()){
+                    //开启K8S Java服务监控
+                    log.info("发现服务 {} , 启动插件 {} ",jmxPlugin.serverName() + "-JMXCommandInfos",pluginName);
+                    doJob(JMXPluginJob.class,desc,jmxPlugin.step(),jobDataMap,jobServerName);
+                }
+            }else if(jmxPlugin.activateType() == PluginActivateType.FORCE){
+                doJob(JMXPluginJob.class,desc,jmxPlugin.step(),jobDataMap,jobServerName);
             }
         }
     }
@@ -114,28 +120,28 @@ public class AgentJobHelper {
      * @param jdbcPlugin
      * @param pluginName
      * @param jobClazz
-     * @param serverName
+     * @param jobServerName
      * @param desc
      * @param jobDataMap
      * @throws SchedulerException
      */
-    public synchronized static void pluginWorkForJDBC(JDBCPlugin jdbcPlugin ,String pluginName, Class<? extends Job> jobClazz, String serverName,String desc, JobDataMap jobDataMap) throws SchedulerException {
+    public synchronized static void pluginWorkForJDBC(JDBCPlugin jdbcPlugin ,String pluginName, Class<? extends Job> jobClazz, String jobServerName,String desc, JobDataMap jobDataMap) throws SchedulerException {
         PluginActivateType pluginActivateType = jdbcPlugin.activateType();
         int step = jdbcPlugin.step();
         //只有指定job未启动过的情况下才进行work开启
-        if(!isHasWorked(serverName)){
+        if(!isHasWorked(jobServerName)){
             if(pluginActivateType == PluginActivateType.AUTO){
                 try {
                     Collection<JDBCConnectionInfo> connectionInfos = jdbcPlugin.getConnectionInfos();
                     if(connectionInfos != null && !connectionInfos.isEmpty()){
                         //无异常且连接正常,代表连接获取成功,开启服务监控
-                        log.info("发现服务 {} , 启动插件 {} ",serverName,pluginName);
-                        doJob(jobClazz,desc,step,jobDataMap,serverName);
+                        log.info("发现服务 {} , 启动插件 {} ",jobServerName,pluginName);
+                        doJob(jobClazz,desc,step,jobDataMap,jobServerName);
                     }
                 } catch (Exception ignored) {
                 }
             }else if(!StringUtils.isEmpty(jdbcPlugin.jdbcConfig()) && pluginActivateType == PluginActivateType.FORCE){
-                doJob(jobClazz,desc,step,jobDataMap,serverName);
+                doJob(jobClazz,desc,step,jobDataMap,jobServerName);
             }
         }
     }
@@ -203,23 +209,23 @@ public class AgentJobHelper {
         }
     }
 
-    private static void doJob(Class<? extends Job> jobClazz,String desc,int step,JobDataMap jobDataMap,String serverName) throws SchedulerException {
+    private static void doJob(Class<? extends Job> jobClazz,String desc,int step,JobDataMap jobDataMap,String jobServerName) throws SchedulerException {
         JobDetail job = getJobDetail(jobClazz,desc,desc + "的监控数据push调度JOB",jobDataMap);
         Trigger trigger = getTrigger(step,desc,desc + "的监控数据push调度任务");
         ScheduleJobResult scheduleJobResult = SchedulerUtil.executeScheduleJob(job,trigger);
         scheduleResults.add(scheduleJobResult);
-        workResult(scheduleJobResult,serverName);
+        workResult(scheduleJobResult,jobServerName);
     }
 
     /**
      * 启动结果处理并记录work
      * @param scheduleJobResult
      */
-    public static void workResult(ScheduleJobResult scheduleJobResult,String serverName){
+    public static void workResult(ScheduleJobResult scheduleJobResult,String jobServerName){
         if(scheduleJobResult.getScheduleJobStatus() == ScheduleJobStatus.SUCCESS){
             log.info("{} 启动成功",scheduleJobResult.getTrigger().getDescription());
             //记录work
-            addWorkJob(serverName);
+            addWorkJob(jobServerName);
         }else if(scheduleJobResult.getScheduleJobStatus() == ScheduleJobStatus.FAILED){
             log.error("{} 启动失败",scheduleJobResult.getTrigger().getDescription());
         }

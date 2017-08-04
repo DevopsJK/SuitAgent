@@ -51,22 +51,38 @@ public class PluginExecute {
             try {
                 JMXPlugin jmxPlugin = (JMXPlugin) plugin;
                 JobDataMap jobDataMap = new JobDataMap();
-                //若jmxServerName有多个值,分别进行job启动
-                for (String jmxServerName : ((JMXPlugin) plugin).jmxServerName().split(",")) {
-                    if(!StringUtils.isEmpty(jmxServerName)){
-                        String pluginName = String.format("%s-%s",jmxPlugin.pluginName(),jmxServerName);
-                        jobDataMap.put("pluginName",pluginName);
-                        jobDataMap.put("jmxServerName",jmxServerName);
-                        jobDataMap.put("pluginObject",jmxPlugin);
+                //启动jmxServerName
+                if (jmxPlugin.jmxServerName() != null){
+                    //若jmxServerName有多个值,分别进行job启动
+                    for (String jmxServerName : ((JMXPlugin) plugin).jmxServerName().split(",")) {
+                        if(!StringUtils.isEmpty(jmxServerName)){
+                            String pluginName = String.format("%s-%s",jmxPlugin.pluginName(),jmxServerName);
+                            jobDataMap.put("pluginName",pluginName);
+                            jobDataMap.put("jmxServerName",jmxServerName);
+                            jobDataMap.put("pluginObject",jmxPlugin);
 
-                        AgentJobHelper.pluginWorkForJMX(pluginName,
-                                jmxPlugin.activateType(),
-                                jmxPlugin.step(),
-                                pluginName,
-                                jmxPlugin.serverName() + "-" + jmxServerName,
-                                jmxServerName,
-                                jobDataMap);
+                            AgentJobHelper.pluginWorkForJMX(pluginName,
+                                    jmxPlugin,
+                                    pluginName,
+                                    jmxPlugin.serverName() + "-" + jmxServerName,
+                                    jmxServerName,
+                                    jobDataMap);
+                        }
                     }
+                }
+
+                //启动k8sJMX Job
+                if (!jmxPlugin.commandInfos().isEmpty()){
+                    jobDataMap.put("pluginName",jmxPlugin.pluginName());
+                    //jmxServerName设值null，只采集该插件的commandInfos监控
+                    jobDataMap.put("jmxServerName",null);
+                    jobDataMap.put("pluginObject",jmxPlugin);
+                    AgentJobHelper.pluginWorkForJMX(jmxPlugin.pluginName(),
+                            jmxPlugin,
+                            jmxPlugin.pluginName(),
+                            jmxPlugin.serverName() + "-" + "JMXCommandInfos",
+                            null,
+                            jobDataMap);
                 }
             } catch (Exception e) {
                 log.error("插件启动异常",e);
