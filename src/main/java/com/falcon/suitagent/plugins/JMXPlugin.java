@@ -10,7 +10,7 @@ package com.falcon.suitagent.plugins;
 
 import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
-import com.falcon.suitagent.vo.jmx.JMXExecuteCommandInfo;
+import com.falcon.suitagent.vo.jmx.JavaExecCommandInfo;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,7 +43,7 @@ public interface JMXPlugin extends Plugin{
      * 请勿返回null
      * 默认返回空集合
      */
-    default List<JMXExecuteCommandInfo> commandInfos(){
+    default List<JavaExecCommandInfo> commandInfos(){
         return new ArrayList<>();
     }
 

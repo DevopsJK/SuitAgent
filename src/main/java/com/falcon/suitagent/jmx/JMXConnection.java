@@ -9,7 +9,7 @@ import com.falcon.suitagent.exception.JMXUnavailabilityType;
 import com.falcon.suitagent.jmx.vo.JMXConnectionInfo;
 import com.falcon.suitagent.util.HostUtil;
 import com.falcon.suitagent.util.StringUtils;
-import com.falcon.suitagent.vo.jmx.JMXExecuteCommandInfo;
+import com.falcon.suitagent.vo.jmx.JavaExecCommandInfo;
 import com.sun.tools.attach.VirtualMachineDescriptor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
@@ -40,7 +40,7 @@ public class JMXConnection {
     private static final Map<String,Integer> serverConnectCount = new HashMap<>();//记录服务应有的JMX连接数
 
     private String serverName;
-    private List<JMXExecuteCommandInfo> commandInfos = new ArrayList<>();
+    private List<JavaExecCommandInfo> commandInfos = new ArrayList<>();
 
     /**
      * 删除JMX连接池连接
@@ -79,11 +79,11 @@ public class JMXConnection {
      * 当serverName不为空时，只采集serverName的JMX
      * 当serverName为空时，只采集jmxExecuteCommandInfos中的JMX
      * @param serverName
-     * @param jmxExecuteCommandInfos
+     * @param javaExecCommandInfos
      */
-    public JMXConnection(String serverName, List<JMXExecuteCommandInfo> jmxExecuteCommandInfos) {
+    public JMXConnection(String serverName, List<JavaExecCommandInfo> javaExecCommandInfos) {
         this.serverName = serverName;
-        this.commandInfos.addAll(jmxExecuteCommandInfos);
+        this.commandInfos.addAll(javaExecCommandInfos);
     }
 
     /**
@@ -118,7 +118,7 @@ public class JMXConnection {
                     collect(Collectors.toList()));
         }
         if (commandInfos != null && !commandInfos.isEmpty()){
-            for (JMXExecuteCommandInfo commandInfo : commandInfos) {
+            for (JavaExecCommandInfo commandInfo : commandInfos) {
                 connections.addAll(connectCacheLibrary.entrySet().
                         stream().
                         filter(entry -> entry.getKey().equals(commandInfo.getAppName())).
@@ -171,7 +171,7 @@ public class JMXConnection {
 
             //指定命令行方式的JMX连接，避免重复监控CommandInfo
             if (serverName == null){
-                for (JMXExecuteCommandInfo commandInfo : this.commandInfos) {
+                for (JavaExecCommandInfo commandInfo : this.commandInfos) {
                     JMXConnectUrlInfo jmxConnectUrlInfo = getConnectorAddress(commandInfo);
                     if (jmxConnectUrlInfo == null) {
                         log.error("应用 {} 的JMX连接URL获取失败",commandInfo);
@@ -240,7 +240,7 @@ public class JMXConnection {
     private void clearCacheForAllCommandInfos(){
         //清除当前连接池中的连接
         List<String> removeKey = new ArrayList<>();
-        for (JMXExecuteCommandInfo commandInfo : this.commandInfos) {
+        for (JavaExecCommandInfo commandInfo : this.commandInfos) {
             removeKey.addAll(connectCacheLibrary.keySet().stream().filter(key -> key.equals(commandInfo.getAppName())).collect(Collectors.toList()));
         }
         removeKey.forEach(key -> {
@@ -252,7 +252,7 @@ public class JMXConnection {
     /**
      * 清楚连接缓存
      */
-    private void clearCacheForCommandInfo(JMXExecuteCommandInfo commandInfo){
+    private void clearCacheForCommandInfo(JavaExecCommandInfo commandInfo){
         //清除当前连接池中的连接
         List<String> removeKey = new ArrayList<>();
         removeKey.addAll(connectCacheLibrary.keySet().stream().filter(key -> key.equals(commandInfo.getAppName())).collect(Collectors.toList()));
@@ -309,7 +309,7 @@ public class JMXConnection {
 
         //避免重复监控CommandInfo
         if (serverName == null){
-            for (JMXExecuteCommandInfo commandInfo : this.commandInfos) {
+            for (JavaExecCommandInfo commandInfo : this.commandInfos) {
                 JMXConnectionInfo cached = connectCacheLibrary.get(commandInfo.getAppName());
                 //未缓存或缓存中的对象失效
                 if (cached == null || !cached.isValid()){
@@ -362,7 +362,7 @@ public class JMXConnection {
         return jmxConnectUrlInfo;
     }
 
-    private JMXConnectUrlInfo getConnectorAddress(JMXExecuteCommandInfo commandInfo){
+    private JMXConnectUrlInfo getConnectorAddress(JavaExecCommandInfo commandInfo){
         JMXConnectUrlInfo jmxConnectUrlInfo = null;
         jmxConnectUrlInfo = AbstractJmxCommand.findJMXRemoteUrlByProcessId(commandInfo.getCommand(),0, commandInfo.getIp());
         if(jmxConnectUrlInfo != null){
@@ -401,7 +401,7 @@ public class JMXConnection {
      * @return
      * @throws IOException
      */
-    private JMXConnectionInfo initJMXConnectionInfo(JMXConnector connector,JMXExecuteCommandInfo commandInfo) throws IOException {
+    private JMXConnectionInfo initJMXConnectionInfo(JMXConnector connector,JavaExecCommandInfo commandInfo) throws IOException {
         JMXConnectionInfo jmxConnectionInfo = new JMXConnectionInfo();
         jmxConnectionInfo.setJmxConnector(connector);
         jmxConnectionInfo.setCacheKeyId(commandInfo.getAppName());
@@ -433,7 +433,7 @@ public class JMXConnection {
      * 连接失败的JMX的初始化动作
      * @param commandInfo
      */
-    private JMXConnectionInfo initBadJMXConnect(JMXExecuteCommandInfo commandInfo){
+    private JMXConnectionInfo initBadJMXConnect(JavaExecCommandInfo commandInfo){
         JMXConnectionInfo jmxConnectionInfo = new JMXConnectionInfo();
         jmxConnectionInfo.setValid(false,JMXUnavailabilityType.connectionFailed);
         jmxConnectionInfo.setConnectionServerName(commandInfo.getAppName());

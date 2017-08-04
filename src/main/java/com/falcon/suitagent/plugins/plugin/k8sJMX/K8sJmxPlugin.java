@@ -29,7 +29,7 @@ import com.falcon.suitagent.plugins.JMXPlugin;
 import com.falcon.suitagent.plugins.Plugin;
 import com.falcon.suitagent.plugins.util.PluginActivateType;
 import com.falcon.suitagent.util.StringUtils;
-import com.falcon.suitagent.vo.jmx.JMXExecuteCommandInfo;
+import com.falcon.suitagent.vo.jmx.JavaExecCommandInfo;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ public class K8sJmxPlugin implements JMXPlugin {
     private boolean hasWatched = false;
     private K8sApiServerConnector k8sApiServerConnector;
 
-    private static final List<JMXExecuteCommandInfo> commandInfos = new ArrayList<>();
+    private static final List<JavaExecCommandInfo> commandInfos = new ArrayList<>();
 
     /**
      * 自定义的监控属性的监控值基础配置名
@@ -83,7 +83,7 @@ public class K8sJmxPlugin implements JMXPlugin {
      * 默认返回空集合
      */
     @Override
-    public List<JMXExecuteCommandInfo> commandInfos() {
+    public List<JavaExecCommandInfo> commandInfos() {
         synchronized (commandInfos){
             return commandInfos;
         }
@@ -103,8 +103,8 @@ public class K8sJmxPlugin implements JMXPlugin {
     @Override
     public String agentSignName(JMXMetricsValueInfo jmxMetricsValueInfo, int pid) {
         String appName = jmxMetricsValueInfo.getJmxConnectionInfo().getConnectionServerName();//该值为JMXExecuteCommandInfo.appName
-        for (JMXExecuteCommandInfo jmxExecuteCommandInfo : commandInfos()) {
-            if (jmxExecuteCommandInfo.getAppName().equals(appName)){
+        for (JavaExecCommandInfo javaExecCommandInfo : commandInfos()) {
+            if (javaExecCommandInfo.getAppName().equals(appName)){
                 //若需要监控的配置中存在此appName，返回appName作为标识名
                 return appName;
             }
@@ -172,7 +172,7 @@ public class K8sJmxPlugin implements JMXPlugin {
                     //若Pod中有多个容器
                     count++;
                     if (container.getCmd().contains("java")){
-                        JMXExecuteCommandInfo commandInfo = new JMXExecuteCommandInfo();
+                        JavaExecCommandInfo commandInfo = new JavaExecCommandInfo();
                         if (count > 1){
                             commandInfo.setAppName(pod.getFullName());
                         }else {

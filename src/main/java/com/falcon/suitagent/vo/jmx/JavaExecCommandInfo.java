@@ -28,7 +28,7 @@ import lombok.Data;
  * @author long.qian@msxf.com
  */
 @Data
-public class JMXExecuteCommandInfo {
+public class JavaExecCommandInfo {
 
     /**
      * 应用名识别名，用于上报和示例识别，不可为空
