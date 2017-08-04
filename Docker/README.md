@@ -7,13 +7,13 @@
     ```shell
     mvn clean package -Plinux64-noJar-docker -Dmaven.test.skip=true
     sudo docker build -t alpine:suitagent .
-    sudo docker run \
+    sudo docker run -d \
     	-v /proc:/proc_host:ro \
+    	-v /var/lib/docker:/var/lib/docker_host:ro \
     	-v /dev:/dev_host:ro \
     	-v /var/log/suitagent:/opt/falcon-agent/logs:rw \
     	-v /var/log/suitagent/falcon-agent:/opt/falcon-agent/falcon/agent/var/:rw \
-    	-d --net="host" \
-    	--name suitagent \
+    	--net="host" --name suitagent \
     	alpine:suitagent
     ```
 
