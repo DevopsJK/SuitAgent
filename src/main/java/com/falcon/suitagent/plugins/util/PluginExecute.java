@@ -51,7 +51,7 @@ public class PluginExecute {
             try {
                 JMXPlugin jmxPlugin = (JMXPlugin) plugin;
                 JobDataMap jobDataMap = new JobDataMap();
-                //启动jmxServerName
+                //指定jmxServerName
                 if (jmxPlugin.jmxServerName() != null){
                     //若jmxServerName有多个值,分别进行job启动
                     for (String jmxServerName : ((JMXPlugin) plugin).jmxServerName().split(",")) {
@@ -71,7 +71,7 @@ public class PluginExecute {
                     }
                 }
 
-                //启动k8sJMX Job
+                //Java启动命令行
                 if (!jmxPlugin.commandInfos().isEmpty()){
                     jobDataMap.put("pluginName",jmxPlugin.pluginName());
                     //jmxServerName设值null，只采集该插件的commandInfos监控
