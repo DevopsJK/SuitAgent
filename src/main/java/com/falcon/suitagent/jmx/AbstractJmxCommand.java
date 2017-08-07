@@ -57,7 +57,7 @@ public class AbstractJmxCommand {
         if (StringUtils.isEmpty(command)){
             log.info("JMX Remote Target Pid:{}", pid);
         }else {
-            log.info("已指定JMX Command:{}",command);
+            log.debug("已指定JMX Command:{}",command);
         }
         String cmdForMac = "ps u -p " + pid;
         String cmdForLinux = "cat /proc/" + pid + "/cmdline";
