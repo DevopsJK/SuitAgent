@@ -99,10 +99,23 @@ public class AgentJobHelper {
         //只有指定job未启动过的情况下才进行work开启
         if(!isHasWorked(jobServerName)){
             if(jmxPlugin.activateType() == PluginActivateType.AUTO){
-                if(JMXUtil.hasJMXServerInLocal(jmxServerName)){
-                    //开启本地Java服务监控
-                    log.info("发现服务 {} , 启动插件 {} ",jobServerName,pluginName);
-                    doJob(JMXPluginJob.class,desc,jmxPlugin.step(),jobDataMap,jobServerName);
+                if (AgentConfiguration.INSTANCE.isDockerRuntime()){
+                    //容器运行环境
+                    try {
+                        if (!JMXUtil.getHostJavaCommandInfosFromContainer(jmxServerName).isEmpty()){
+                            log.info("发现服务 {} [Docker] , 启动插件 {} ",jobServerName,pluginName);
+                            doJob(JMXPluginJob.class,desc,jmxPlugin.step(),jobDataMap,jobServerName);
+                        }
+                    } catch (Exception e) {
+                        log.error("JMX监控服务启动异常",e);
+                    }
+                }else {
+                    //物理机运行环境
+                    if(JMXUtil.hasJMXServerInLocal(jmxServerName)){
+                        //开启本地Java服务监控
+                        log.info("发现服务 {} , 启动插件 {} ",jobServerName,pluginName);
+                        doJob(JMXPluginJob.class,desc,jmxPlugin.step(),jobDataMap,jobServerName);
+                    }
                 }
                 if (jmxServerName == null && !jmxPlugin.commandInfos().isEmpty()){
                     //开启K8S Java服务监控

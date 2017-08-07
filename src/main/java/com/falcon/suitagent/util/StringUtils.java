@@ -23,6 +23,10 @@ public class StringUtils {
         return str == null || str.length() == 0;
     }
 
+    public static boolean isNotEmpty(String str){
+        return str != null && str.length() != 0;
+    }
+
     /**
      * 返回指定数字的字符串形式
      * @param value

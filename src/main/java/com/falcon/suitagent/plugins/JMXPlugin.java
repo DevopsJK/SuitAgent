@@ -48,6 +48,7 @@ public interface JMXPlugin extends Plugin{
     }
 
     /**
+     * 仅非容器环境会被调用
      * 该插件监控的服务标记名称,目的是为能够在操作系统中准确定位该插件监控的是哪个具体服务
      * 可用变量:
      * {jmxServerName} - 代表直接使用当前服务的jmxServerName
@@ -75,6 +76,7 @@ public interface JMXPlugin extends Plugin{
     Collection<FalconReportObject> inbuiltReportObjectsForValid(JMXMetricsValueInfo metricsValueInfo);
 
     /**
+     * 仅非容器环境会被调用
      * 能够代表该JMX服务的绝对路径
      * 若实现此方法,则若该JMX连接不可用时,将会检查该JMX服务的目录是否存在,若不存在,将会清除此连接,并不再监控此JMX。
      * 否则,若JMX连接不可用,将会上报不可用的报告,且不会清除
@@ -89,6 +91,7 @@ public interface JMXPlugin extends Plugin{
     }
 
     /**
+     * 仅非容器环境会被调用
      * JMX服务器的目录名称
      * @param pid
      * 服务的进程id

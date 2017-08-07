@@ -44,4 +44,13 @@ public class JavaExecCommandInfo {
      * -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=4444 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false
      */
     private String command;
+
+    public JavaExecCommandInfo() {
+    }
+
+    public JavaExecCommandInfo(String appName, String ip, String command) {
+        this.appName = appName;
+        this.ip = ip;
+        this.command = command;
+    }
 }
