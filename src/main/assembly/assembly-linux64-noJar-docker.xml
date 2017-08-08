@@ -40,12 +40,12 @@
         </fileSet>
 
         <fileSet>
-            <directory>${project.basedir}/src/main/resources_ext/falcon/linux64/agent</directory>
+            <directory>${project.basedir}/src/main/resources_ext/falcon/linux64/agent-docker</directory>
             <outputDirectory>falcon/agent/</outputDirectory>
         </fileSet>
 
         <fileSet>
-            <directory>${project.basedir}/src/main/resources_ext/falcon/linux64/agent-docker</directory>
+            <directory>${project.basedir}/src/main/resources_ext/falcon/linux64/agent</directory>
             <outputDirectory>falcon/agent/</outputDirectory>
         </fileSet>
 
