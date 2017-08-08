@@ -11,6 +11,7 @@ package com.falcon.suitagent.plugins.plugin.docker;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.plugins.DetectPlugin;
 import com.falcon.suitagent.util.CommandUtilForUnix;
+import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.vo.detect.DetectResult;
 import lombok.extern.slf4j.Slf4j;
 
@@ -160,7 +161,7 @@ public class DockerPlugin implements DetectPlugin {
                     DetectResult.Metric metric = new DetectResult.Metric(collectObject.getMetric(),
                             collectObject.getValue(),
                             CounterType.GAUGE,
-                            "containerName=" + collectObject.getContainerName() + collectObject.getTags());
+                            "containerName=" + collectObject.getContainerName() + (StringUtils.isEmpty(collectObject.getTags()) ? "" : ("," + collectObject.getTags())));
                     metrics.add(metric);
                 }
                 detectResult.setMetricsList(metrics);
