@@ -160,26 +160,20 @@ public class DockerPlugin implements DetectPlugin {
     public DetectResult detectResult(String address) {
         DetectResult detectResult = new DetectResult();
         try {
-            CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit("docker ps",false,7);
-            if(executeResult.isSuccess){
-                DockerMetrics dockerMetrics = new DockerMetrics("0.0.0.0",Integer.parseInt(address));
-                List<DockerMetrics.CollectObject> collectObjectList = dockerMetrics.getMetrics();
+            DockerMetrics dockerMetrics = new DockerMetrics("0.0.0.0",Integer.parseInt(address));
+            List<DockerMetrics.CollectObject> collectObjectList = dockerMetrics.getMetrics();
 
-                List<DetectResult.Metric> metrics = new ArrayList<>();
-                for (DockerMetrics.CollectObject collectObject : collectObjectList) {
-                    DetectResult.Metric metric = new DetectResult.Metric(collectObject.getMetric(),
-                            collectObject.getValue(),
-                            CounterType.GAUGE,
-                            "containerName=" + collectObject.getContainerName() + collectObject.getTags());
-                    metrics.add(metric);
-                }
-                detectResult.setMetricsList(metrics);
-
-                detectResult.setSuccess(true);
-            }else{
-                log.error("Docker daemon failed : {}",executeResult.msg);
-                detectResult.setSuccess(false);
+            List<DetectResult.Metric> metrics = new ArrayList<>();
+            for (DockerMetrics.CollectObject collectObject : collectObjectList) {
+                DetectResult.Metric metric = new DetectResult.Metric(collectObject.getMetric(),
+                        collectObject.getValue(),
+                        CounterType.GAUGE,
+                        "containerName=" + collectObject.getContainerName() + collectObject.getTags());
+                metrics.add(metric);
             }
+            detectResult.setMetricsList(metrics);
+
+            detectResult.setSuccess(true);
 
         } catch (Exception e) {
             log.error("Docker数据采集异常",e);
