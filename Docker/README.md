@@ -9,11 +9,14 @@
     sudo docker build -t alpine:suitagent .
     sudo docker run -d \
     	-v /proc:/proc_host:ro \
-    	-v /var/lib/docker:/var/lib/docker_host:ro \
+    	-v /var/lib/docker:/var/lib/docker:ro \
     	-v /dev:/dev_host:ro \
     	-v /var/log/suitagent:/opt/falcon-agent/logs:rw \
     	-v /var/log/suitagent/falcon-agent:/opt/falcon-agent/falcon/agent/var/:rw \
-    	--net="host" --name suitagent \
+    	-v /:/rootfs:ro \
+        -v /var/run:/var/run:rw \
+        -v /sys:/sys:ro \
+    	-net="host" --name suitagent \
     	alpine:suitagent
     ```
 

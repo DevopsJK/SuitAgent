@@ -38,7 +38,7 @@ import java.util.List;
 @Slf4j
 public class DockerUtil {
 
-    public static final String DOCKER_VOLUME = "/var/lib/docker_host";
+    public static final String DOCKER_VOLUME = "/var/lib/docker";
     public static final String DOCKER_CONTAINER_VOLUME = DOCKER_VOLUME + "/containers";
     public static final String PROC_HOST_VOLUME = "/proc_host";
 
@@ -52,7 +52,7 @@ public class DockerUtil {
         }
         File file_dockerContainerDir = new File(DOCKER_CONTAINER_VOLUME);
         if (!file_dockerContainerDir.exists()){
-            log.error("必须指定docker run参数：-v /var/lib/docker:/var/lib/docker_host:ro");
+            log.error("必须指定docker run参数：-v /var/lib/docker:/var/lib/docker:ro");
             return false;
         }
         return true;

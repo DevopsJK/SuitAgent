@@ -8,9 +8,11 @@ package com.falcon.suitagent.plugins.plugin.docker;
  * guqiu@yiji.com 2016-08-10 11:15 创建
  */
 
+import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.plugins.DetectPlugin;
 import com.falcon.suitagent.util.CommandUtilForUnix;
+import com.falcon.suitagent.util.OSUtil;
 import com.falcon.suitagent.vo.detect.DetectResult;
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,24 +43,32 @@ public class DockerPlugin implements DetectPlugin {
     @Override
     public Collection<String> autoDetectAddress() {
         //只在linux下启动
-        if("linux".equals(System.getProperty("os.name").toLowerCase().trim())){
+        if(OSUtil.isLinux()){
             if(!addressesCache.isEmpty()){
                 return addressesCache;
             }
 
-            File docker = new File("/usr/bin/docker");
-            if(docker.exists()){
-                int cAdvisorPort = getNativeCAdvisorPort();
-                if(cAdvisorPort == 0){
-                    if(startCAdvisor()){
-                        cAdvisorPort = this.cAdvisorPort;
-                    }
-                }
-                if(cAdvisorPort != 0){
-                    //传递cAdvisor监听端口为启动地址
+            if (AgentConfiguration.INSTANCE.isDockerRuntime()){
+                //容器环境，直接启动内置CAdvisor
+                if(startCAdvisor()){
                     addressesCache.add(String.valueOf(cAdvisorPort));
                 }
+            }else {
+                File docker = new File("/usr/bin/docker");
+                if(docker.exists()){
+                    int cAdvisorPort = getNativeCAdvisorPort();
+                    if(cAdvisorPort == 0){
+                        if(startCAdvisor()){
+                            cAdvisorPort = this.cAdvisorPort;
+                        }
+                    }
+                    if(cAdvisorPort != 0){
+                        //传递cAdvisor监听端口为启动地址
+                        addressesCache.add(String.valueOf(cAdvisorPort));
+                    }
+                }
             }
+
 
             return addressesCache;
         }else {
