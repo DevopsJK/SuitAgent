@@ -8,24 +8,24 @@ package com.falcon.suitagent.plugins.plugin.standalone;
  * guqiu@yiji.com 2016-06-27 16:13 创建
  */
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
 import com.falcon.suitagent.plugins.JMXPlugin;
-import com.falcon.suitagent.plugins.Plugin;
-import com.falcon.suitagent.plugins.metrics.MetricsCommon;
 import com.falcon.suitagent.plugins.util.PluginActivateType;
-import com.falcon.suitagent.util.*;
-import com.falcon.suitagent.vo.HttpResult;
+import com.falcon.suitagent.util.CommandUtilForUnix;
+import com.falcon.suitagent.util.StringUtils;
+import com.sun.tools.attach.VirtualMachine;
+import com.sun.tools.attach.VirtualMachineDescriptor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author guqiu@yiji.com
@@ -57,6 +57,20 @@ public class StandaloneJarPlugin implements JMXPlugin {
     @Override
     public String jmxServerName() {
         StringBuilder sb = new StringBuilder();
+
+        //遍历当前运行的应用
+        List<VirtualMachineDescriptor> vms = VirtualMachine.list();
+        for (VirtualMachineDescriptor desc : vms) {
+            File file = new File(desc.displayName());
+            if(file.exists()){
+                //java -jar 形式启动的Java应用
+                if(!jmxServerName.contains(file.getName())){
+                    sb.append(",").append(file.getName());
+                }
+            }
+        }
+
+        //遍历配置目录
         if(!StringUtils.isEmpty(jmxServerDir)){
             for (String dir : jmxServerDir.split(",")) {
                 if(!StringUtils.isEmpty(dir)){
@@ -68,7 +82,9 @@ public class StandaloneJarPlugin implements JMXPlugin {
                                 String fileName = file.getFileName().toString();
                                 String fineNameLower = fileName.toLowerCase();
                                 if(!fineNameLower.contains("-sources") && fineNameLower.endsWith(".jar")){
-                                    sb.append(",").append(fileName);
+                                    if (!jmxServerName.contains(fileName)){
+                                        sb.append(",").append(fileName);
+                                    }
                                 }
 
                                 return super.visitFile(file, attrs);
@@ -110,99 +126,8 @@ public class StandaloneJarPlugin implements JMXPlugin {
      */
     @Override
     public Collection<FalconReportObject> inbuiltReportObjectsForValid(JMXMetricsValueInfo metricsValueInfo) {
-        /**
-         * 以下为重庆易极付公司（笨熊科技）的YijiBoot应用特有的健康检查监控
-         */
-        List<FalconReportObject> reportObjects = new ArrayList<>();
-
-        String jarName = metricsValueInfo.getJmxConnectionInfo().getConnectionServerName();
-
-        if(!StringUtils.isEmpty(jarName) && jarName.toLowerCase().endsWith(".jar")){
-            String appName = jarName.replace(".jar","").replace(".JAR","");
-            String portFile = String.format("/var/log/webapps/%s/app.httpport",appName);
-            String port = "";
-            if(new File(portFile).exists()){
-                port = FileUtil.getTextFileContent(portFile).trim();
-            }
-            if(!StringUtils.isEmpty(port)){
-                try {
-                    String httpHealthUrl = String.format("http://%s:%s/mgt/health", HostUtil.getHostIp(),port);
-                    String httpMetricsUrl = String.format("http://%s:%s/mgt/metrics", HostUtil.getHostIp(),port);
-
-                    HttpResult httpHealthResult = HttpUtil.get(httpHealthUrl);
-                    HttpResult httpMetricsResult = HttpUtil.get(httpMetricsUrl);
-
-                    FalconReportObject falconReportObject = new FalconReportObject();
-                    MetricsCommon.setReportCommonValue(falconReportObject,step);
-                    falconReportObject.setCounterType(CounterType.GAUGE);
-                    falconReportObject.setTimestamp(metricsValueInfo.getTimestamp());
-
-                    if (httpMetricsResult.getStatus() >= 400){
-                        log.error("YijiBoot应用Metrics状况获取失败:http请求失败 {}",httpMetricsResult);
-                    }else {
-                        String jsonStr = httpMetricsResult.getResult();
-                        JSONObject jsonObject = JSON.parseObject(jsonStr);
-                        Set<String> keys = jsonObject.keySet();
-                        for (String key : keys) {
-                            falconReportObject.setTags(MetricsCommon.getTags(jarName,this,serverName()));
-                            if(key.startsWith("tp") || key.startsWith("druid")){
-                                String metrics = getYijiBootMetricsPrefix(key);
-                                String tagValue = key.replace(metrics + ".","");
-                                String value = jsonObject.getString(key);
-
-                                falconReportObject.setMetric(metrics);
-                                falconReportObject.setValue(value);
-                                falconReportObject.appendTags("mgtMetrics=" + tagValue);
-                                reportObjects.add(falconReportObject.clone());
-                            }else {
-                                String value = jsonObject.getString(key);
-                                falconReportObject.setMetric(key);
-                                falconReportObject.setValue(value);
-                                reportObjects.add(falconReportObject.clone());
-                            }
-                        }
-                    }
-
-                    if(httpHealthResult.getStatus() >= 400){
-                        log.error("YijiBoot应用健康状况获取失败:http请求失败 {}",httpHealthResult);
-                    }else{
-                        falconReportObject.setTags(MetricsCommon.getTags(jarName,this,serverName()));
-                        String jsonStr = httpHealthResult.getResult();
-                        JSONObject jsonObject = JSON.parseObject(jsonStr);
-                        Map<String,Object> map = new HashMap<>();
-                        JSONUtil.jsonToMap(map,jsonObject,"health");
-                        for (Map.Entry<String, Object> entry : map.entrySet()) {
-                            String value = String.valueOf(entry.getValue());
-                            if("UP".equals(value)){
-                                falconReportObject.setMetric(entry.getKey().replace("/","."));
-                                falconReportObject.setValue("1");
-                                reportObjects.add(falconReportObject.clone());
-                            }else if ("DOWN".equals(value)){
-                                falconReportObject.setMetric(entry.getKey().replace("/","."));
-                                falconReportObject.setValue("0");
-                                reportObjects.add(falconReportObject.clone());
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    log.error("YijiBoot应用状况获取异常",e);
-                }
-            }
-        }
-
-
-        return reportObjects;
+        return new ArrayList<>();
     }
-
-    private String getYijiBootMetricsPrefix(String key){
-        String[] split = key.split("\\.");
-        if (split.length >= 2){
-            return split[0] + "." + split[1];
-        }else {
-            return split.length > 0 ? split[0] : key;
-        }
-    }
-
 
     /**
      * 插件初始化操作
