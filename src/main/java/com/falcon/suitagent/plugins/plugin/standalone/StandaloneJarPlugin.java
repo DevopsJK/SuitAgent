@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author guqiu@yiji.com
@@ -37,6 +38,7 @@ public class StandaloneJarPlugin implements JMXPlugin {
     private String jmxServerName;
     private int step;
     private PluginActivateType pluginActivateType;
+    private static final ConcurrentHashMap<String,ConcurrentHashMap<String,Integer>> NAME_CACHE = new ConcurrentHashMap<>();
 
     /**
      * 自定义的监控属性的监控值基础配置名
@@ -61,11 +63,16 @@ public class StandaloneJarPlugin implements JMXPlugin {
         //遍历当前运行的应用
         List<VirtualMachineDescriptor> vms = VirtualMachine.list();
         for (VirtualMachineDescriptor desc : vms) {
-            File file = new File(desc.displayName());
-            if(file.exists()){
-                //java -jar 形式启动的Java应用
-                if(!jmxServerName.contains(file.getName())){
-                    sb.append(",").append(file.getName());
+            //java -jar 形式启动的Java应用
+            if(desc.displayName().matches(".*\\.jar")){
+                String name = desc.displayName();
+                File file = new File(name);
+                if (file.exists()){
+                    //文件全路径形式只取文件名
+                    name = file.getName();
+                }
+                if (jmxServerName == null || !jmxServerName.contains(name)){
+                    sb.append(",").append(name);
                 }
             }
         }
@@ -82,7 +89,7 @@ public class StandaloneJarPlugin implements JMXPlugin {
                                 String fileName = file.getFileName().toString();
                                 String fineNameLower = fileName.toLowerCase();
                                 if(!fineNameLower.contains("-sources") && fineNameLower.endsWith(".jar")){
-                                    if (!jmxServerName.contains(fileName)){
+                                    if (jmxServerName == null || !jmxServerName.contains(fileName)){
                                         sb.append(",").append(fileName);
                                     }
                                 }
@@ -113,7 +120,31 @@ public class StandaloneJarPlugin implements JMXPlugin {
      */
     @Override
     public String agentSignName(JMXMetricsValueInfo jmxMetricsValueInfo, int pid) {
-        return "{jmxServerName}";
+        String cmd = String.format("cat /proc/%d/cmdline",pid);
+        try {
+            CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
+            String serverName = jmxMetricsValueInfo.getJmxConnectionInfo().getConnectionServerName();
+            ConcurrentHashMap<String,Integer> nameCache = NAME_CACHE.get(serverName);
+            if (nameCache == null){
+                nameCache = new ConcurrentHashMap<>();
+                nameCache.put(executeResult.msg,1);
+                NAME_CACHE.put(serverName,nameCache);
+                return serverName + "-1";
+            }else {
+                Integer index = nameCache.get(executeResult.msg);
+                if (index != null){
+                    return serverName + "-" + index;
+                }else {
+                    index = nameCache.keySet().size() + 1;
+                    nameCache.put(executeResult.msg,index);
+                    NAME_CACHE.put(serverName,nameCache);
+                    return serverName + "-" + index;
+                }
+            }
+        } catch (IOException e) {
+            log.error("",e);
+            return "{jmxServerName}";
+        }
     }
 
     /**

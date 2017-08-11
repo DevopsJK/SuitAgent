@@ -8,15 +8,14 @@ package com.falcon.suitagent.plugins.plugin.zk;
  * guqiu@yiji.com 2016-06-27 15:41 创建
  */
 
-import com.falcon.suitagent.plugins.JMXPlugin;
-import com.falcon.suitagent.plugins.Plugin;
-import com.falcon.suitagent.plugins.util.PluginActivateType;
-import com.falcon.suitagent.util.CommandUtilForUnix;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
 import com.falcon.suitagent.jmx.vo.JMXObjectNameInfo;
+import com.falcon.suitagent.plugins.JMXPlugin;
 import com.falcon.suitagent.plugins.metrics.MetricsCommon;
+import com.falcon.suitagent.plugins.util.PluginActivateType;
+import com.falcon.suitagent.util.CommandUtilForUnix;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
