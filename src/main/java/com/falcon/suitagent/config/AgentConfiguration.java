@@ -107,6 +107,11 @@ public enum  AgentConfiguration {
 
     private String agentHomeDir;
 
+    /**
+     * 是否为Docker容器的运行环境
+     */
+    private boolean dockerRuntime = false;
+
 
     private static final String CONF_AGENT_ENDPOINT = "agent.endpoint";
     private static final String CONF_AGENT_HOME = "agent.home.dir";
@@ -189,6 +194,9 @@ public enum  AgentConfiguration {
         }catch (IOException e) {
             System.err.println(this.agentConfPath + " 配置文件读取失败 Agent启动失败");
             System.exit(0);
+        }
+        if ("true".equals(System.getProperty("runtime.docker"))){
+            this.dockerRuntime = true;
         }
         init();
         initJMXCommon();

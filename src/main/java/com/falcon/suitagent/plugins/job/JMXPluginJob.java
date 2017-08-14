@@ -8,6 +8,7 @@ package com.falcon.suitagent.plugins.job;
  * guqiu@yiji.com 2016-06-24 13:42 创建
  */
 
+import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.plugins.JMXPlugin;
 import com.falcon.suitagent.plugins.metrics.JMXMetricsValue;
 import com.falcon.suitagent.falcon.ReportMetrics;
@@ -40,13 +41,18 @@ public class JMXPluginJob implements Job {
 
             //设置agentSignName
             for (JMXMetricsValueInfo jmxMetricsValueInfo : jmxMetricsValueInfos) {
-                String agentSignName = jmxPlugin.agentSignName(jmxMetricsValueInfo,
-                        jmxMetricsValueInfo.getJmxConnectionInfo().getPid());
-                if ("{jmxServerName}".equals(agentSignName)) {
-                    //设置变量
-                    jmxMetricsValueInfo.getJmxConnectionInfo().setName(jmxServerName);
-                }else{
-                    jmxMetricsValueInfo.getJmxConnectionInfo().setName(agentSignName);
+                if (AgentConfiguration.INSTANCE.isDockerRuntime()){
+                    //容器环境直接取 JavaExecCommandInfo.appName
+                    jmxMetricsValueInfo.getJmxConnectionInfo().setName(jmxMetricsValueInfo.getJmxConnectionInfo().getConnectionServerName());
+                }else {
+                    String agentSignName = jmxPlugin.agentSignName(jmxMetricsValueInfo,
+                            jmxMetricsValueInfo.getJmxConnectionInfo().getPid());
+                    if ("{jmxServerName}".equals(agentSignName)) {
+                        //设置变量
+                        jmxMetricsValueInfo.getJmxConnectionInfo().setName(jmxServerName);
+                    }else{
+                        jmxMetricsValueInfo.getJmxConnectionInfo().setName(agentSignName);
+                    }
                 }
             }
 

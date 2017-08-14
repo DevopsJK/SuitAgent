@@ -10,8 +10,11 @@ package com.falcon.suitagent.plugins;
 
 import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
+import com.falcon.suitagent.vo.jmx.JavaExecCommandInfo;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * JMX 插件接口
@@ -34,6 +37,18 @@ public interface JMXPlugin extends Plugin{
     String jmxServerName();
 
     /**
+     * Java应用启动时的命令信息的列表集合
+     * 若实现该接口，则该方法中返回描述的Java应用将会自动建立JMX连接进行监控
+     * @return
+     * 请勿返回null
+     * 默认返回空集合
+     */
+    default List<JavaExecCommandInfo> commandInfos(){
+        return new ArrayList<>();
+    }
+
+    /**
+     * 仅非容器环境会被调用
      * 该插件监控的服务标记名称,目的是为能够在操作系统中准确定位该插件监控的是哪个具体服务
      * 可用变量:
      * {jmxServerName} - 代表直接使用当前服务的jmxServerName
@@ -61,6 +76,7 @@ public interface JMXPlugin extends Plugin{
     Collection<FalconReportObject> inbuiltReportObjectsForValid(JMXMetricsValueInfo metricsValueInfo);
 
     /**
+     * 仅非容器环境会被调用
      * 能够代表该JMX服务的绝对路径
      * 若实现此方法,则若该JMX连接不可用时,将会检查该JMX服务的目录是否存在,若不存在,将会清除此连接,并不再监控此JMX。
      * 否则,若JMX连接不可用,将会上报不可用的报告,且不会清除
@@ -75,6 +91,7 @@ public interface JMXPlugin extends Plugin{
     }
 
     /**
+     * 仅非容器环境会被调用
      * JMX服务器的目录名称
      * @param pid
      * 服务的进程id

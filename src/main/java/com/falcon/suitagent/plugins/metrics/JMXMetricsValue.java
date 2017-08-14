@@ -4,6 +4,7 @@
  */
 package com.falcon.suitagent.plugins.metrics;
 
+import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.exception.JMXUnavailabilityType;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.falcon.FalconReportObject;
@@ -223,25 +224,29 @@ public class JMXMetricsValue extends MetricsCommon {
             if (StringUtils.isEmpty(jmxConnectionInfo.getName()) || "null".equals(jmxConnectionInfo.getName())) {
                 /*
                  * 清除没有agentSignName的JMX连接
-                 * 此处是为过滤没有正常采集到数据的采集，防止上报没有用的监控数据
+                 * 过滤没有正常采集到数据的采集，以及没有设置JavaExecCommandInfo.appName的JMX连接
                  * 注：没有实现agentSignName方法的插件会默认打上NO NAME的字符串，且并不会上传此tag
                  */
 
                 removeJMXConnectCache(jmxConnectionInfo);
                 continue;
             }
-            if (jmxConnectionInfo.getPid() != 0 && jmxConnectionInfo.getConnectionServerName() != null) {
-                String serverDirPath = getServerDirPath(jmxConnectionInfo.getPid(), jmxConnectionInfo.getConnectionServerName());
-                if (!StringUtils.isEmpty(serverDirPath)) {
-                    if (serverDirPath.contains(" ")) {
-                        log.warn("发现路径: {} 有空格,请及时处理,否则Agent可能会工作不正常", serverDirPath);
-                    }
-                    if (!jmxConnectionInfo.isValid()) {
-                        File file = new File(serverDirPath);
-                        if (!file.exists()) {
-                            //JMX服务目录不存在,清除连接,跳过此次监控
-                            removeJMXConnectCache(jmxConnectionInfo);
-                            continue;
+
+            //非容器运行环境才进行目录判断（容器环境的连接清除逻辑直接移步JMXManager类）
+            if (!AgentConfiguration.INSTANCE.isDockerRuntime()){
+                if (jmxConnectionInfo.getPid() != 0 && jmxConnectionInfo.getConnectionServerName() != null) {
+                    String serverDirPath = getServerDirPath(jmxConnectionInfo.getPid(), jmxConnectionInfo.getConnectionServerName());
+                    if (!StringUtils.isEmpty(serverDirPath)) {
+                        if (serverDirPath.contains(" ")) {
+                            log.warn("发现路径: {} 有空格,请及时处理,否则Agent可能会工作不正常", serverDirPath);
+                        }
+                        if (!jmxConnectionInfo.isValid()) {
+                            File file = new File(serverDirPath);
+                            if (!file.exists()) {
+                                //JMX服务目录不存在,清除连接,跳过此次监控
+                                removeJMXConnectCache(jmxConnectionInfo);
+                                continue;
+                            }
                         }
                     }
                 }
@@ -262,7 +267,10 @@ public class JMXMetricsValue extends MetricsCommon {
             if (jmxConnectionInfo.getMBeanServerConnection() != null
                     && jmxConnectionInfo.getCacheKeyId() != null
                     && jmxConnectionInfo.getConnectionQualifiedServerName() != null) {
-                String dirName = getServerDirName(jmxConnectionInfo.getPid(), jmxConnectionInfo.getConnectionServerName());
+                String dirName = null;
+                if (!AgentConfiguration.INSTANCE.isDockerRuntime()) {
+                    dirName = getServerDirName(jmxConnectionInfo.getPid(), jmxConnectionInfo.getConnectionServerName());
+                }
                 if (hasContinueReport(jmxConnectionInfo)) {
                     Set<KitObjectNameMetrics> kitObjectNameMetricsSet = new HashSet<>();
                     Set<JMXMetricsConfiguration> jmxMetricsConfigurationSet = metricsValueInfo.getJmxMetricsConfigurations();
@@ -294,9 +302,13 @@ public class JMXMetricsValue extends MetricsCommon {
                         result.addAll(inbuilt);
                     }
 
-                    result.stream().filter(reportObject -> !StringUtils.isEmpty(dirName)).forEach(reportObject -> {
-                        reportObject.appendTags("dir=" + dirName);
-                    });
+                    if (!AgentConfiguration.INSTANCE.isDockerRuntime()) {
+                        String finalDirName = dirName;
+                        String finalDirName1 = dirName;
+                        result.stream().filter(reportObject -> !StringUtils.isEmpty(finalDirName)).forEach(reportObject -> {
+                            reportObject.appendTags("dir=" + finalDirName1);
+                        });
+                    }
                 }
             }
 

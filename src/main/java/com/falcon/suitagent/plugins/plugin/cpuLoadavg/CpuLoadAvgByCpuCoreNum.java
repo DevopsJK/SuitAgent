@@ -8,12 +8,12 @@ package com.falcon.suitagent.plugins.plugin.cpuLoadavg;
  * guqiu@yiji.com 2016-10-13 16:30 创建
  */
 
-import com.falcon.suitagent.util.FileUtil;
-import com.falcon.suitagent.util.StringUtils;
+import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.plugins.DetectPlugin;
-import com.falcon.suitagent.plugins.Plugin;
+import com.falcon.suitagent.util.FileUtil;
 import com.falcon.suitagent.util.Maths;
+import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.vo.detect.DetectResult;
 
 import java.io.File;
@@ -34,10 +34,15 @@ public class CpuLoadAvgByCpuCoreNum implements DetectPlugin{
 
     @Override
     public Collection<String> autoDetectAddress() {
-        File file = new File("/proc/loadavg");
+        File file;
+        if (AgentConfiguration.INSTANCE.isDockerRuntime()){
+            file = new File("/proc_host/loadavg");
+        }else {
+            file = new File("/proc/loadavg");
+        }
         if(file.exists()){
             //若存在/proc/loadavg文件，返回文件地址，使插件启动
-            return Collections.singletonList("/proc/loadavg");
+            return Collections.singletonList(file.getAbsolutePath());
         }
         return new ArrayList<>();
     }

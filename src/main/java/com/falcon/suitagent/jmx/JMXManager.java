@@ -4,16 +4,17 @@
  */
 package com.falcon.suitagent.jmx;
 
-import com.falcon.suitagent.plugins.JMXPlugin;
-import com.falcon.suitagent.util.JMXMetricsConfigUtil;
+import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.exception.JMXUnavailabilityException;
 import com.falcon.suitagent.exception.JMXUnavailabilityType;
 import com.falcon.suitagent.jmx.vo.JMXConnectionInfo;
 import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
 import com.falcon.suitagent.jmx.vo.JMXObjectNameInfo;
+import com.falcon.suitagent.plugins.JMXPlugin;
 import com.falcon.suitagent.util.BlockingQueueUtil;
 import com.falcon.suitagent.util.ExceptionUtil;
 import com.falcon.suitagent.util.ExecuteThreadUtil;
+import com.falcon.suitagent.util.JMXMetricsConfigUtil;
 import com.falcon.suitagent.vo.jmx.JMXMetricsConfiguration;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,11 +38,16 @@ public class JMXManager {
 
     private static final int objectNameListTimeout = 15;
     private static final int mBeanTimeout = 5;
+    private static final ConcurrentHashMap<String,Integer> resetCount_container = new ConcurrentHashMap<>();
 
 
     /**
-     * 获取指定应用的名称(如运行的main类名称)所有的jmx值
+     * 获取所有的jmx值
+     *
+     * 当serverName不为空时，只采集serverName的JMX
+     * 当serverName为空时，只采集jmxPlugin中的commandInfos的JMX
      * @param serverName
+     * @param jmxPlugin
      * @return
      */
     public static List<JMXMetricsValueInfo> getJmxMetricValue(String serverName, JMXPlugin jmxPlugin){
@@ -49,7 +55,7 @@ public class JMXManager {
         final Set<JMXMetricsConfiguration> jmxMetricsConfigurationSet = JMXMetricsConfigUtil.getMetricsConfig(jmxPlugin);
         final BlockingQueue<Object> blockingQueue4BeanSet = new ArrayBlockingQueue<>(1);
         final BlockingQueue<Object> blockingQueue4BeanValue = new ArrayBlockingQueue<>(1);
-        JMXConnection jmxConnection = new JMXConnection(serverName);
+        JMXConnection jmxConnection = new JMXConnection(serverName,jmxPlugin.commandInfos());
         List<JMXConnectionInfo> mbeanConns = jmxConnection.getMBeanConnection();
         if(mbeanConns.size() == 1
                 && !mbeanConns.get(0).isValid()
@@ -239,10 +245,20 @@ public class JMXManager {
 
         //若JMX可用的连接数小于该服务应有的JMX连接数,则进行尝试重新构建连接
         //将会在下一次获取监控值时生效
-        if(validCount < JMXConnection.getServerConnectCount(serverName)){
-            // TODO 这里可以设置重试次数,超过次数就进行此连接的清除
-            log.error("发现服务{}有缺失的JMX连接,尝试重新构建该服务的jmx连接",serverName);
-            jmxConnection.resetMBeanConnection();
+        if(validCount < (JMXConnection.getServerConnectCount(serverName) + jmxPlugin.commandInfos().size())){
+            // 容器环境设置重试次数,超过次数就进行此连接的清除
+            if (AgentConfiguration.INSTANCE.isDockerRuntime()){
+                Integer resetCount = resetCount_container.get(serverName) == null ? 0 : resetCount_container.get(serverName);
+                resetCount++;
+                if (resetCount >= 100){//该服务超过100次重置操作，强制重置该服务连接状态
+                    jmxConnection.resetMBeanConnection(true);
+                    resetCount = 0;
+                }
+                resetCount_container.put(serverName,resetCount);
+            }else {
+                log.error("发现服务{}有缺失的JMX连接,尝试重新构建该服务的jmx连接",serverName);
+                jmxConnection.resetMBeanConnection(false);
+            }
         }
 
         return jmxMetricsValueInfoList;
