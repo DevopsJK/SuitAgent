@@ -96,7 +96,11 @@ public class StandaloneJarPlugin implements JMXPlugin {
             //java -jar 形式启动的Java应用
             if(desc.displayName().matches(".*\\.jar(\\s*-*.*)*")){
                 Pattern pattern = Pattern.compile(".*\\.jar");
-                String name = pattern.matcher(desc.displayName()).group();
+                String name = desc.displayName();
+                Matcher matcher = pattern.matcher(name);
+                if (matcher.find()){
+                    name = matcher.group();
+                }
                 File file = new File(name);
                 if (file.exists()){
                     //文件全路径形式只取文件名
