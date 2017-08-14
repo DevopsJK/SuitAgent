@@ -125,7 +125,7 @@ public class JMXUtil {
         List<VirtualMachineDescriptor> vms = VirtualMachine.list();
         for (VirtualMachineDescriptor desc : vms) {
             //java -jar 形式启动的Java应用
-            if(desc.displayName().matches(".*\\.jar")){
+            if(desc.displayName().matches(".*\\.jar") && desc.displayName().contains(serverName)){
                 vmDescList.add(desc);
             }else if(hasContainsServerName(desc.displayName(),serverName)){
                 vmDescList.add(desc);

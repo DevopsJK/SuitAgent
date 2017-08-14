@@ -100,9 +100,13 @@ public class StandaloneJarPlugin implements JMXPlugin {
                 if (file.exists()){
                     //文件全路径形式只取文件名
                     name = file.getName();
-                }
-                if (jmxServerName == null || !jmxServerName.contains(name)){
-                    sb.append(",").append(name);
+                    if (jmxServerName == null || !jmxServerName.contains(name)){
+                        sb.append(",").append(name);
+                    }
+                }else {
+                    if (jmxServerName == null || !jmxServerName.contains(name)){
+                        sb.append(",").append(name);
+                    }
                 }
             }
         }
