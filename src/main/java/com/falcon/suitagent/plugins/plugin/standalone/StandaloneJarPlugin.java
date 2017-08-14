@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.falcon.suitagent.jmx.AbstractJmxCommand.getJMXConfigValueForLinux;
 import static com.falcon.suitagent.jmx.AbstractJmxCommand.getJMXConfigValueForMac;
@@ -61,6 +63,32 @@ public class StandaloneJarPlugin implements JMXPlugin {
     @Override
     public String jmxServerName() {
         StringBuilder sb = new StringBuilder();
+
+        //jsvc方式的应用，匹配只有一个 -cp xxx.jar 形式的Java应用
+        String cmd = "ps aux | grep jsvc";
+        try {
+            CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
+            String msg = executeResult.msg;
+            for (String s : msg.split("\n")) {
+                Pattern pattern = Pattern.compile("-cp\\s+(/.*).jar");
+                Matcher matcher = pattern.matcher(s);
+                if (matcher.find()){
+                    String find = matcher.group();
+                    //将第一个-cp去掉
+                    find = find.replaceFirst("\\s*-cp\\s*","");
+                    //将后面的-cp全部换成:
+                    find = find.replaceAll("\\s*-cp\\s*",":");
+                    if (!find.contains(":")){
+                        File file = new File(find);
+                        if (jmxServerName == null || !jmxServerName.contains(file.getName())){
+                            sb.append(",").append(file.getName());
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.error("",e);
+        }
 
         //遍历当前运行的应用
         List<VirtualMachineDescriptor> vms = VirtualMachine.list();
