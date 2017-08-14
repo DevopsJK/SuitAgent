@@ -94,8 +94,9 @@ public class StandaloneJarPlugin implements JMXPlugin {
         List<VirtualMachineDescriptor> vms = VirtualMachine.list();
         for (VirtualMachineDescriptor desc : vms) {
             //java -jar 形式启动的Java应用
-            if(desc.displayName().matches(".*\\.jar")){
-                String name = desc.displayName();
+            if(desc.displayName().matches(".*\\.jar(\\s*-*.*)*")){
+                Pattern pattern = Pattern.compile(".*\\.jar");
+                String name = pattern.matcher(desc.displayName()).group();
                 File file = new File(name);
                 if (file.exists()){
                     //文件全路径形式只取文件名
