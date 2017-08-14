@@ -144,10 +144,14 @@ public class JMXUtil {
      * @return
      */
     private static boolean isJSVC(String pid,String serverName){
+        String name = serverName;
+        if (serverName.equals("org.apache.catalina.startup.Bootstrap start")){
+            name = "org.apache.catalina.startup.Bootstrap";
+        }
         String cmd = String.format("ps u -p %s | grep jsvc",pid);
         try {
             CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
-            return executeResult.msg.contains(serverName);
+            return executeResult.msg.contains(name);
         } catch (IOException e) {
             log.error("",e);
             return false;
