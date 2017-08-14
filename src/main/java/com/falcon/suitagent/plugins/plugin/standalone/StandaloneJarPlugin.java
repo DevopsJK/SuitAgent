@@ -13,6 +13,7 @@ import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
 import com.falcon.suitagent.plugins.JMXPlugin;
 import com.falcon.suitagent.plugins.util.PluginActivateType;
 import com.falcon.suitagent.util.CommandUtilForUnix;
+import com.falcon.suitagent.util.OSUtil;
 import com.falcon.suitagent.util.StringUtils;
 import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;
@@ -26,7 +27,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+
+import static com.falcon.suitagent.jmx.AbstractJmxCommand.getJMXConfigValueForLinux;
+import static com.falcon.suitagent.jmx.AbstractJmxCommand.getJMXConfigValueForMac;
 
 /**
  * @author guqiu@yiji.com
@@ -38,7 +41,6 @@ public class StandaloneJarPlugin implements JMXPlugin {
     private String jmxServerName;
     private int step;
     private PluginActivateType pluginActivateType;
-    private static final ConcurrentHashMap<String,ConcurrentHashMap<String,Integer>> NAME_CACHE = new ConcurrentHashMap<>();
 
     /**
      * 自定义的监控属性的监控值基础配置名
@@ -120,27 +122,32 @@ public class StandaloneJarPlugin implements JMXPlugin {
      */
     @Override
     public String agentSignName(JMXMetricsValueInfo jmxMetricsValueInfo, int pid) {
-        String cmd = String.format("cat /proc/%d/cmdline",pid);
+        String jmxPortOpt = "-Dcom.sun.management.jmxremote.port";
+        String cmdForMac = "ps u -p " + pid;
+        String cmdForLinux = "cat /proc/" + pid + "/cmdline";
         try {
-            CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
-            String serverName = jmxMetricsValueInfo.getJmxConnectionInfo().getConnectionServerName();
-            ConcurrentHashMap<String,Integer> nameCache = NAME_CACHE.get(serverName);
-            if (nameCache == null){
-                nameCache = new ConcurrentHashMap<>();
-                nameCache.put(executeResult.msg,1);
-                NAME_CACHE.put(serverName,nameCache);
-                return serverName + "-1";
+            CommandUtilForUnix.ExecuteResult result;
+            if (OSUtil.isLinux()){
+                result = CommandUtilForUnix.execWithReadTimeLimit(cmdForLinux,false,7);
+            }else if (OSUtil.isMac()){
+                result = CommandUtilForUnix.execWithReadTimeLimit(cmdForMac,false,7);
             }else {
-                Integer index = nameCache.get(executeResult.msg);
-                if (index != null){
-                    return serverName + "-" + index;
-                }else {
-                    index = nameCache.keySet().size() + 1;
-                    nameCache.put(executeResult.msg,index);
-                    NAME_CACHE.put(serverName,nameCache);
-                    return serverName + "-" + index;
-                }
+                log.error("只支持Linux和Mac平台");
+                return null;
             }
+
+            String msg = result.msg;
+            String port = null;
+            if (OSUtil.isLinux()){
+                port = getJMXConfigValueForLinux(msg,jmxPortOpt + "=\\d+",jmxPortOpt + "=");
+            }else if (OSUtil.isMac()){
+                port = getJMXConfigValueForMac(msg,jmxPortOpt);
+            }
+            if (port == null){
+                log.warn("未找到JMX端口号");
+                return "{jmxServerName}";
+            }
+            return jmxMetricsValueInfo.getJmxConnectionInfo().getConnectionServerName() + "-JP_" + port;
         } catch (IOException e) {
             log.error("",e);
             return "{jmxServerName}";

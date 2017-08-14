@@ -167,7 +167,7 @@ public class AbstractJmxCommand {
         return result;
     }
 
-    private static String getJMXConfigValueForMac(String msg,String cmdKey){
+    public static String getJMXConfigValueForMac(String msg,String cmdKey){
         StringTokenizer st = new StringTokenizer(msg," ",false);
         while( st.hasMoreElements() ) {
             String split = st.nextToken();

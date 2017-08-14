@@ -220,7 +220,7 @@ public class JMXMetricsValue extends MetricsCommon {
         //JMX连接清除检查处理
         for (JMXMetricsValueInfo metricsValueInfo : jmxMetricsValueInfos) {
             JMXConnectionInfo jmxConnectionInfo = metricsValueInfo.getJmxConnectionInfo();
-            if (StringUtils.isEmpty(jmxConnectionInfo.getName())) {
+            if (StringUtils.isEmpty(jmxConnectionInfo.getName()) || "null".equals(jmxConnectionInfo.getName())) {
                 /*
                  * 清除没有agentSignName的JMX连接
                  * 此处是为过滤没有正常采集到数据的采集，防止上报没有用的监控数据
