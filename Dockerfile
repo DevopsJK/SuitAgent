@@ -1,4 +1,4 @@
-FROM 10.250.250.16/devops/java:8u131-msxf
+FROM anapsix/alpine-java
 MAINTAINER long.qian@msxf.com
 WORKDIR /opt
 ADD target/falcon-agent-linux64-noJar-docker.tar.gz .

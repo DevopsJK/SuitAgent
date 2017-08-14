@@ -133,18 +133,13 @@ public class JMXUtil {
      */
     public static List<VirtualMachineDescriptor> getVmDescByServerName(String serverName){
         List<VirtualMachineDescriptor> vmDescList = new ArrayList<>();
-        if (!StringUtils.isEmpty(serverName)){
-            List<VirtualMachineDescriptor> vms = VirtualMachine.list();
-            for (VirtualMachineDescriptor desc : vms) {
-                File file = new File(desc.displayName());
-                if(file.exists()){
-                    //java -jar 形式启动的Java应用
-                    if(file.toPath().getFileName().toString().equals(serverName)){
-                        vmDescList.add(desc);
-                    }
-                }else if(hasContainsServerName(desc.displayName(),serverName)){
-                    vmDescList.add(desc);
-                }
+        List<VirtualMachineDescriptor> vms = VirtualMachine.list();
+        for (VirtualMachineDescriptor desc : vms) {
+            //java -jar 形式启动的Java应用
+            if(desc.displayName().matches(".*\\.jar")){
+                vmDescList.add(desc);
+            }else if(hasContainsServerName(desc.displayName(),serverName)){
+                vmDescList.add(desc);
             }
         }
         return vmDescList;
