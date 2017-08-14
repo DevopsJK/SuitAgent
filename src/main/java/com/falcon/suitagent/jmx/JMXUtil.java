@@ -30,6 +30,7 @@ import com.sun.tools.attach.VirtualMachineDescriptor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -47,19 +48,7 @@ public class JMXUtil {
      */
     public static boolean hasJMXServerInLocal(String serverName){
         if(!StringUtils.isEmpty(serverName)){
-            List<VirtualMachineDescriptor> vms = VirtualMachine.list();
-            for (VirtualMachineDescriptor desc : vms) {
-                File file = new File(desc.displayName());
-                if(file.exists()){
-                    //java -jar 形式启动的Java应用
-                    if(file.toPath().getFileName().toString().equals(serverName)){
-                        return true;
-                    }
-                }else if(hasContainsServerName(desc.displayName(),serverName)){
-                    return true;
-                }
-
-            }
+            return !getVmDescByServerName(serverName).isEmpty();
         }
         return false;
     }
@@ -140,9 +129,29 @@ public class JMXUtil {
                 vmDescList.add(desc);
             }else if(hasContainsServerName(desc.displayName(),serverName)){
                 vmDescList.add(desc);
+            }else if (isJSVC(desc.id(),serverName)){
+                VirtualMachineDescriptor descriptor = new VirtualMachineDescriptor(desc.provider(),desc.id(),serverName);
+                vmDescList.add(descriptor);
             }
         }
         return vmDescList;
+    }
+
+    /**
+     * 是否为jsvc方式启动的java应用
+     * @param pid
+     * @param serverName
+     * @return
+     */
+    private static boolean isJSVC(String pid,String serverName){
+        String cmd = String.format("ps u -p %s | grep jsvc",pid);
+        try {
+            CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
+            return executeResult.msg.contains(serverName);
+        } catch (IOException e) {
+            log.error("",e);
+            return false;
+        }
     }
 
     /**
