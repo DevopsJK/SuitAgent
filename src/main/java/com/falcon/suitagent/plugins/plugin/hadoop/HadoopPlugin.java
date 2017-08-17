@@ -63,6 +63,18 @@ public class HadoopPlugin implements JMXPlugin {
      */
     @Override
     public String agentSignName(JMXMetricsValueInfo jmxMetricsValueInfo, int pid) {
+        String name = jmxMetricsValueInfo.getJmxConnectionInfo().getConnectionServerName();
+        if (name.contains("JournalNode")){
+            return "JournalNode";
+        }else if (name.contains("HRegionServer")){
+            return "HRegionServer";
+        }else if (name.contains("DataNode")){
+            return "DataNode";
+        }else if (name.contains("SecondaryNameNode")){
+            return "SecondaryNameNode";
+        }else if (name.contains("NameNode")){
+            return "NameNode";
+        }
         return "{jmxServerName}";
     }
 
