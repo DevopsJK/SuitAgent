@@ -74,6 +74,14 @@ public class HadoopPlugin implements JMXPlugin {
             return "SecondaryNameNode";
         }else if (name.contains("NameNode")){
             return "NameNode";
+        }else if (name.contains("NodeManager")){
+            return "NodeManager";
+        }else if (name.contains("HMaster")){
+            return "HMaster";
+        }else if (name.contains("DFSZKFailoverController")){
+            return "DFSZKFailoverController";
+        }else if (name.contains("ResourceManager")){
+            return "ResourceManager";
         }
         return "{jmxServerName}";
     }
