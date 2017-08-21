@@ -93,24 +93,25 @@ public class StandaloneJarPlugin implements JMXPlugin {
         //遍历当前运行的应用
         List<VirtualMachineDescriptor> vms = VirtualMachine.list();
         for (VirtualMachineDescriptor desc : vms) {
+            //去除--参数
+            String displayName = desc.displayName().replaceAll("(\\s+--.*)*","");
             //java -jar 形式启动的Java应用
-            if(desc.displayName().matches(".*\\.jar(\\s*-*.*)*")){
+            if(displayName.matches(".*\\.jar")){
                 Pattern pattern = Pattern.compile(".*\\.jar");
-                String name = desc.displayName();
-                Matcher matcher = pattern.matcher(name);
+                Matcher matcher = pattern.matcher(displayName);
                 if (matcher.find()){
-                    name = matcher.group();
+                    displayName = matcher.group();
                 }
-                File file = new File(name);
+                File file = new File(displayName);
                 if (file.exists()){
                     //文件全路径形式只取文件名
-                    name = file.getName();
-                    if (jmxServerName == null || !jmxServerName.contains(name)){
-                        sb.append(",").append(name);
+                    displayName = file.getName();
+                    if (jmxServerName == null || !jmxServerName.contains(displayName)){
+                        sb.append(",").append(displayName);
                     }
                 }else {
-                    if (jmxServerName == null || !jmxServerName.contains(name)){
-                        sb.append(",").append(name);
+                    if (jmxServerName == null || !jmxServerName.contains(displayName)){
+                        sb.append(",").append(displayName);
                     }
                 }
             }
