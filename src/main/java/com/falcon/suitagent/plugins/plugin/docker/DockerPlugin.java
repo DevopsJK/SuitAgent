@@ -29,6 +29,7 @@ import java.util.*;
 public class DockerPlugin implements DetectPlugin {
 
     private String cAdvisorPath;
+    private int cAdvisorStartPort = 0;
     private int cAdvisorPort = 0;
     private int step;
     private static final List<String> addressesCache = new ArrayList<>();
@@ -50,17 +51,29 @@ public class DockerPlugin implements DetectPlugin {
             }
 
             if (AgentConfiguration.INSTANCE.isDockerRuntime()){
-                //容器环境，直接启动内置CAdvisor
-                if(startCAdvisor()){
+                String cAdvisorConfPort = System.getenv("cadviosr.port");
+                if (StringUtils.isNotEmpty(cAdvisorConfPort)){//检查容器的环境变量：cadviosr.port
+                    //传递cAdvisor监听端口为启动地址
+                    addressesCache.add(String.valueOf(cAdvisorConfPort));
+                }else if (this.cAdvisorPort != 0){//检查指定的配置项
+                    //传递cAdvisor监听端口为启动地址
                     addressesCache.add(String.valueOf(cAdvisorPort));
+                }else{
+                    if(startCAdvisor()){// 启动内置的CAdvisor
+                        //传递cAdvisor监听端口为启动地址
+                        addressesCache.add(String.valueOf(cAdvisorStartPort));
+                    }
                 }
             }else {
                 File docker = new File("/usr/bin/docker");
-                if(docker.exists()){
+                if (this.cAdvisorPort != 0){//检查指定的配置项
+                    //传递cAdvisor监听端口为启动地址
+                    addressesCache.add(String.valueOf(cAdvisorPort));
+                }else if(docker.exists()){
                     int cAdvisorPort = getNativeCAdvisorPort();
                     if(cAdvisorPort == 0){
                         if(startCAdvisor()){
-                            cAdvisorPort = this.cAdvisorPort;
+                            cAdvisorPort = this.cAdvisorStartPort;
                         }
                     }
                     if(cAdvisorPort != 0){
@@ -69,7 +82,6 @@ public class DockerPlugin implements DetectPlugin {
                     }
                 }
             }
-
 
             return addressesCache;
         }else {
@@ -124,7 +136,7 @@ public class DockerPlugin implements DetectPlugin {
      * @return
      */
     private boolean startCAdvisor(){
-        if(this.cAdvisorPort == 0){
+        if(this.cAdvisorStartPort == 0){
             log.error("请配置cAdvisor的端口地址");
             return false;
         }
@@ -134,7 +146,7 @@ public class DockerPlugin implements DetectPlugin {
             return false;
         }
 
-        cadvisorRunner = new CAdvisorRunner(cAdvisorPath, cAdvisorPort);
+        cadvisorRunner = new CAdvisorRunner(cAdvisorPath, cAdvisorStartPort);
         cadvisorRunner.start();
 
         return true;
@@ -208,7 +220,10 @@ public class DockerPlugin implements DetectPlugin {
     public void init(Map<String, String> properties) {
         this.step = Integer.parseInt(properties.get("step"));
         this.cAdvisorPath = properties.get("pluginDir") + File.separator + "cadvisor";
-        this.cAdvisorPort = Integer.parseInt(properties.get("cadvisor.port"));
+        this.cAdvisorStartPort = Integer.parseInt(properties.get("cadvisor.start.port"));
+        if (StringUtils.isNotEmpty(properties.get("cadvisor.port"))){
+            this.cAdvisorPort = Integer.parseInt(properties.get("cadvisor.port"));
+        }
     }
 
     /**
