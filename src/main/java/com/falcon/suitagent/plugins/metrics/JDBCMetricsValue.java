@@ -61,9 +61,19 @@ public class JDBCMetricsValue extends MetricsCommon {
      */
     private static List<String> MYSQL_COUNTER_METRICS =
             Arrays.asList(
+                    "Slow_queries",
                     "Com_delete",
                     "Com_update",
-                    "Com_select"
+                    "Com_select",
+                    "Bytes_received",
+                    "Bytes_sent",
+                    "Com_insert",
+                    "Com_commit",
+                    "Com_rollback",
+                    "Threads_connected",
+                    "Created_tmp_tables",
+                    "Table_locks_waited",
+                    "Innodb_row_lock_waits"
             );
     /**
      * 相对变化量数据记录
