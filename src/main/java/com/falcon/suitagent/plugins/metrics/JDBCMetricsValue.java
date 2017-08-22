@@ -57,6 +57,15 @@ public class JDBCMetricsValue extends MetricsCommon {
                     "Innodb_row_lock_waits"
             );
     /**
+     * 需要计算成速度的指标
+     */
+    private static List<String> MYSQL_COUNTER_METRICS =
+            Arrays.asList(
+                    "Com_delete",
+                    "Com_update",
+                    "Com_select"
+            );
+    /**
      * 相对变化量数据记录
      */
     private static ConcurrentHashMap<String,Number> metricsHistoryValueForRelative = new ConcurrentHashMap<>();
@@ -180,6 +189,12 @@ public class JDBCMetricsValue extends MetricsCommon {
                     result.forEach(falconReportObject -> {
                         String metrics = falconReportObject.getMetric();
                         String metricsKey = metrics + connectionInfo.getUrl();
+                        if (MYSQL_COUNTER_METRICS.contains(metrics)){
+                            FalconReportObject reportObject = falconReportObject.clone();
+                            reportObject.setMetric(metrics + "_Counter");
+                            reportObject.setCounterType(CounterType.COUNTER);
+                            counterObj.add(reportObject);
+                        }
                         if (MYSQL_RALATIVE_METRICS.contains(metrics)){
                             Number previousValue = metricsHistoryValueForRelative.get(metricsKey);
                             if (previousValue == null){
@@ -195,8 +210,6 @@ public class JDBCMetricsValue extends MetricsCommon {
                                 metricsHistoryValueForRelative.put(metricsKey,NumberUtils.createDouble(falconReportObject.getValue()));
                                 counterObj.add(reportObject);
                             }
-
-
                         }
                     });
 
