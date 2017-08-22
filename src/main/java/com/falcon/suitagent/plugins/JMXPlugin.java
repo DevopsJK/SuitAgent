@@ -53,7 +53,6 @@ public interface JMXPlugin extends Plugin{
      * 可用变量:
      * {jmxServerName} - 代表直接使用当前服务的jmxServerName
      * 如该服务运行的端口号等
-     * 若不需要指定则可返回null
      * @param jmxMetricsValueInfo
      * 该服务连接的jmx对象信息
      * @param pid

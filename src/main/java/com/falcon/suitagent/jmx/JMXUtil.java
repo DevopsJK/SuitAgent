@@ -35,6 +35,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.falcon.suitagent.jmx.AbstractJmxCommand.getJMXConfigValueForLinux;
+import static com.falcon.suitagent.jmx.AbstractJmxCommand.getJMXConfigValueForMac;
+
 /**
  * @author long.qian@msxf.com
  */
@@ -178,6 +181,43 @@ public class JMXUtil {
             }
         }
         return has;
+    }
+
+    /**
+     * 获取JMX Remote端口号
+     * @param pid
+     * @return
+     */
+    public static String getJMXPort(int pid){
+        String jmxPortOpt = "-Dcom.sun.management.jmxremote.port";
+        String cmdForMac = "ps u -p " + pid;
+        String cmdForLinux = "cat /proc/" + pid + "/cmdline";
+        try {
+            CommandUtilForUnix.ExecuteResult result;
+            if (OSUtil.isLinux()){
+                result = CommandUtilForUnix.execWithReadTimeLimit(cmdForLinux,false,7);
+            }else if (OSUtil.isMac()){
+                result = CommandUtilForUnix.execWithReadTimeLimit(cmdForMac,false,7);
+            }else {
+                log.error("只支持Linux和Mac平台");
+                return null;
+            }
+
+            String msg = result.msg;
+            String port = null;
+            if (OSUtil.isLinux()){
+                port = getJMXConfigValueForLinux(msg,jmxPortOpt + "=\\d+",jmxPortOpt + "=");
+            }else if (OSUtil.isMac()){
+                port = getJMXConfigValueForMac(msg,jmxPortOpt);
+            }
+            if (port == null){
+                log.warn("未找到JMX端口号");
+            }
+            return port;
+        } catch (IOException e) {
+            log.error("",e);
+            return null;
+        }
     }
 
 }

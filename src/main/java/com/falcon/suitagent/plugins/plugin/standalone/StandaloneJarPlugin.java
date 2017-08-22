@@ -9,11 +9,11 @@ package com.falcon.suitagent.plugins.plugin.standalone;
  */
 
 import com.falcon.suitagent.falcon.FalconReportObject;
+import com.falcon.suitagent.jmx.JMXUtil;
 import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
 import com.falcon.suitagent.plugins.JMXPlugin;
 import com.falcon.suitagent.plugins.util.PluginActivateType;
 import com.falcon.suitagent.util.CommandUtilForUnix;
-import com.falcon.suitagent.util.OSUtil;
 import com.falcon.suitagent.util.StringUtils;
 import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;
@@ -29,9 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static com.falcon.suitagent.jmx.AbstractJmxCommand.getJMXConfigValueForLinux;
-import static com.falcon.suitagent.jmx.AbstractJmxCommand.getJMXConfigValueForMac;
 
 /**
  * @author guqiu@yiji.com
@@ -160,36 +157,11 @@ public class StandaloneJarPlugin implements JMXPlugin {
      */
     @Override
     public String agentSignName(JMXMetricsValueInfo jmxMetricsValueInfo, int pid) {
-        String jmxPortOpt = "-Dcom.sun.management.jmxremote.port";
-        String cmdForMac = "ps u -p " + pid;
-        String cmdForLinux = "cat /proc/" + pid + "/cmdline";
-        try {
-            CommandUtilForUnix.ExecuteResult result;
-            if (OSUtil.isLinux()){
-                result = CommandUtilForUnix.execWithReadTimeLimit(cmdForLinux,false,7);
-            }else if (OSUtil.isMac()){
-                result = CommandUtilForUnix.execWithReadTimeLimit(cmdForMac,false,7);
-            }else {
-                log.error("只支持Linux和Mac平台");
-                return null;
-            }
-
-            String msg = result.msg;
-            String port = null;
-            if (OSUtil.isLinux()){
-                port = getJMXConfigValueForLinux(msg,jmxPortOpt + "=\\d+",jmxPortOpt + "=");
-            }else if (OSUtil.isMac()){
-                port = getJMXConfigValueForMac(msg,jmxPortOpt);
-            }
-            if (port == null){
-                log.warn("未找到JMX端口号");
-                return "{jmxServerName}";
-            }
-            return jmxMetricsValueInfo.getJmxConnectionInfo().getConnectionServerName() + "-JP_" + port;
-        } catch (IOException e) {
-            log.error("",e);
+        String jmxPort = JMXUtil.getJMXPort(pid);
+        if (jmxPort == null){
             return "{jmxServerName}";
         }
+        return jmxMetricsValueInfo.getJmxConnectionInfo().getConnectionServerName() + "-JP_" + jmxPort;
     }
 
     /**
