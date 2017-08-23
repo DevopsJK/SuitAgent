@@ -42,6 +42,11 @@ class Script {
      * @return
      */
     public boolean isValid(){
-        return scriptType != null && stepCycle != 0 && !StringUtils.isEmpty(path) && !StringUtils.isEmpty(metric) && resultType != null;
+        if (this.resultType == ScriptResultType.NUMBER){
+            return scriptType != null && stepCycle != 0 && !StringUtils.isEmpty(path) && !StringUtils.isEmpty(metric);
+        }else if (this.resultType == ScriptResultType.JSON){
+            return scriptType != null && stepCycle != 0 && !StringUtils.isEmpty(path);
+        }
+        return false;
     }
 }

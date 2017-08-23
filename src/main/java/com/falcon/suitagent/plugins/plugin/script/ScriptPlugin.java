@@ -21,6 +21,9 @@ package com.falcon.suitagent.plugins.plugin.script;
  * long.qian@msxf.com 2017-07-10 10:36 创建
  */
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.plugins.DetectPlugin;
 import com.falcon.suitagent.plugins.Plugin;
@@ -152,6 +155,8 @@ public class ScriptPlugin implements DetectPlugin {
                             if (metric != null){
                                 metrics.add(metric);
                             }
+                        }else if (script.getResultType() == ScriptResultType.JSON){
+                            metrics.addAll(executeJSONScript(script));
                         }
                         lastScriptExecTime.put(script.toString(),currentTime);
                     }
@@ -181,11 +186,52 @@ public class ScriptPlugin implements DetectPlugin {
                 CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,5);
                 String value = executeResult.msg.trim();
                 if (NumberUtils.isNumber(value)){
-                    return new DetectResult.Metric(script.getMetric(),value, CounterType.valueOf(script.getCounterType()),script.getTags());
+                    return new DetectResult.Metric(script.getMetric(),value, CounterType.valueOf(script.getCounterType()), script.getTags());
                 }
             } catch (Exception e) {
                 log.error("脚本执行异常",e);
             }
+        }
+        return null;
+    }
+
+    private List<DetectResult.Metric> executeJSONScript(Script script){
+        List<DetectResult.Metric> metrics = new ArrayList<>();
+        if (script != null && script.isValid()){
+            try {
+                String cmd = "";
+                if (script.getScriptType() == ScriptType.SHELL){
+                    cmd = "sh " + script.getPath();
+                }
+                if (script.getScriptType() == ScriptType.PYTHON){
+                    cmd = "python " + script.getPath();
+                }
+                CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,5);
+                String json = executeResult.msg.trim();
+                if (json.startsWith("{") && json.endsWith("}")){
+                    JSONObject jsonObject = JSON.parseObject(json);
+                    metrics.add(parseMetricFromJSONObject(jsonObject));
+                }else if (json.startsWith("[") && json.endsWith("]")){
+                    JSONArray jsonArray = JSON.parseArray(json);
+                    if (jsonArray != null){
+                        for (Object o : jsonArray) {
+                            if (o instanceof JSONObject){
+                                metrics.add(parseMetricFromJSONObject((JSONObject) o));
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("脚本执行异常",e);
+            }
+
+        }
+        return metrics;
+    }
+
+    private DetectResult.Metric parseMetricFromJSONObject(JSONObject jsonObject){
+        if (jsonObject != null){
+            return new DetectResult.Metric(jsonObject.getString("metric"),jsonObject.getString("value"), CounterType.valueOf(jsonObject.getString("counterType")), jsonObject.getString("tags"));
         }
         return null;
     }
@@ -201,8 +247,8 @@ public class ScriptPlugin implements DetectPlugin {
             return null;
         }
         String[] ss1 = address.split(",");
-        if (ss1.length < 4){
-            log.error("地址不符合,分隔的最低要求的四部分:{}",address);
+        if (ss1.length < 3){
+            log.error("地址不符合,分隔的最低要求的三部分:{}",address);
             return null;
         }
         Script script = new Script();
@@ -243,7 +289,7 @@ public class ScriptPlugin implements DetectPlugin {
             }
         }
         if (!script.isValid()){
-            log.error("无效Script(有元素未赋值):{}",script);
+            log.error("无效Script(有元素未赋值):{}", script);
             return null;
         }
         return script;

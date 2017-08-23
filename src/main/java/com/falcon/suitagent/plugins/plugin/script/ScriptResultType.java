@@ -25,5 +25,5 @@ package com.falcon.suitagent.plugins.plugin.script;
  * @author long.qian@msxf.com
  */
 enum ScriptResultType {
-    NUMBER;
+    NUMBER,JSON;
 }
