@@ -151,12 +151,12 @@ public class ScriptPlugin implements DetectPlugin {
                     long abs = Math.abs(interval - process);
                     if (abs <= this.step * 1000){//脚本距上次执行时间差在最小周期范围内就触发脚本执行
                         if (script.getResultType() == ScriptResultType.NUMBER){
-                            DetectResult.Metric metric = executeNumberScript(script);
+                            DetectResult.Metric metric = executeNumberScript(script,script.getStepCycle() * this.step);
                             if (metric != null){
                                 metrics.add(metric);
                             }
                         }else if (script.getResultType() == ScriptResultType.JSON){
-                            metrics.addAll(executeJSONScript(script));
+                            metrics.addAll(executeJSONScript(script,script.getStepCycle() * this.step));
                         }
                         lastScriptExecTime.put(script.toString(),currentTime);
                     }
@@ -173,7 +173,7 @@ public class ScriptPlugin implements DetectPlugin {
      * @param script
      * @return
      */
-    private DetectResult.Metric executeNumberScript(Script script) {
+    private DetectResult.Metric executeNumberScript(Script script,int step) {
         if (script != null && script.isValid()){
             try {
                 String cmd = "";
@@ -186,7 +186,7 @@ public class ScriptPlugin implements DetectPlugin {
                 CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,5);
                 String value = executeResult.msg.trim();
                 if (NumberUtils.isNumber(value)){
-                    return new DetectResult.Metric(script.getMetric(),value, CounterType.valueOf(script.getCounterType()), script.getTags());
+                    return new DetectResult.Metric(script.getMetric(),value, CounterType.valueOf(script.getCounterType()), script.getTags(),step);
                 }
             } catch (Exception e) {
                 log.error("脚本执行异常",e);
@@ -195,7 +195,7 @@ public class ScriptPlugin implements DetectPlugin {
         return null;
     }
 
-    private List<DetectResult.Metric> executeJSONScript(Script script){
+    private List<DetectResult.Metric> executeJSONScript(Script script,int step){
         List<DetectResult.Metric> metrics = new ArrayList<>();
         if (script != null && script.isValid()){
             try {
@@ -210,13 +210,13 @@ public class ScriptPlugin implements DetectPlugin {
                 String json = executeResult.msg.trim();
                 if (json.startsWith("{") && json.endsWith("}")){
                     JSONObject jsonObject = JSON.parseObject(json);
-                    metrics.add(parseMetricFromJSONObject(jsonObject));
+                    metrics.add(parseMetricFromJSONObject(jsonObject,step));
                 }else if (json.startsWith("[") && json.endsWith("]")){
                     JSONArray jsonArray = JSON.parseArray(json);
                     if (jsonArray != null){
                         for (Object o : jsonArray) {
                             if (o instanceof JSONObject){
-                                metrics.add(parseMetricFromJSONObject((JSONObject) o));
+                                metrics.add(parseMetricFromJSONObject((JSONObject) o, step));
                             }
                         }
                     }
@@ -229,9 +229,9 @@ public class ScriptPlugin implements DetectPlugin {
         return metrics;
     }
 
-    private DetectResult.Metric parseMetricFromJSONObject(JSONObject jsonObject){
+    private DetectResult.Metric parseMetricFromJSONObject(JSONObject jsonObject, int step){
         if (jsonObject != null){
-            return new DetectResult.Metric(jsonObject.getString("metric"),jsonObject.getString("value"), CounterType.valueOf(jsonObject.getString("counterType")), jsonObject.getString("tags"));
+            return new DetectResult.Metric(jsonObject.getString("metric"),jsonObject.getString("value"), CounterType.valueOf(jsonObject.getString("counterType")), jsonObject.getString("tags"),step);
         }
         return null;
     }

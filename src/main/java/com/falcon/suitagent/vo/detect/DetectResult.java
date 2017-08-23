@@ -60,6 +60,11 @@ public class DetectResult {
         public String tags;
 
         /**
+         * 自定义监控值的tag
+         */
+        public int step;
+
+        /**
          * @param metricName
          * @param value
          * @param counterType
@@ -70,6 +75,21 @@ public class DetectResult {
             this.value = value;
             this.counterType = counterType;
             this.tags = tags;
+        }
+
+        /**
+         * @param metricName
+         * @param value
+         * @param counterType
+         * @param tags
+         * @param step
+         */
+        public Metric(String metricName,String value, CounterType counterType, String tags,int step) {
+            this.metricName = metricName;
+            this.value = value;
+            this.counterType = counterType;
+            this.tags = tags;
+            this.step = step;
         }
     }
 }

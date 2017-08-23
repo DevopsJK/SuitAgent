@@ -73,6 +73,9 @@ public class DetectMetricsValue extends MetricsCommon {
                                     .appendTags(metric.tags);
                             setReportCommonValue(reportObject,detectPlugin.step());
                             addCommonTagFromDetectResult(detectResult,reportObject);
+                            if (metric.step > 0){
+                                reportObject.setStep(metric.step);
+                            }
                             result.add(reportObject);
                         });
                     }
