@@ -51,7 +51,7 @@ public class DockerPlugin implements DetectPlugin {
             }
 
             if (AgentConfiguration.INSTANCE.isDockerRuntime()){
-                String cAdvisorConfPort = System.getenv("cadvisor-port");
+                String cAdvisorConfPort = System.getenv("cadvisor_port");
                 if (StringUtils.isNotEmpty(cAdvisorConfPort)){//检查容器的环境变量：cadviosr.port
                     //传递cAdvisor监听端口为启动地址
                     addressesCache.add(String.valueOf(cAdvisorConfPort));
