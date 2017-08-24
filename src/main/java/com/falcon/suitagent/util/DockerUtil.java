@@ -152,6 +152,8 @@ public class DockerUtil {
             JSONObject net = config.getJSONObject("NetworkSettings").getJSONObject("Networks");
             if (net != null){
                 return net.get("host") != null;
+            }else {
+                log.warn("未找到Networks配置");
             }
         }
         return false;
@@ -173,7 +175,11 @@ public class DockerUtil {
         if (StringUtils.isNotEmpty(configContent)){
             JSONObject config = JSON.parseObject(configContent);
             JSONObject net = config.getJSONObject("NetworkSettings").getJSONObject("Networks");
-            return net.keySet().stream().map(net::getJSONObject).findFirst().map(netConfig -> netConfig.getString("IPAddress")).orElse(null);
+            if (net != null){
+                return net.keySet().stream().map(net::getJSONObject).findFirst().map(netConfig -> netConfig.getString("IPAddress")).orElse(null);
+            }else {
+                log.warn("未找到Networks配置");
+            }
         }
         return null;
     }
