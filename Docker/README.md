@@ -12,7 +12,7 @@
 
     # 1、指定本机已有的cAdvisor服务，比如cAdvisor监听在5555端口：
     sudo docker run -d \
-    	-e "cadvisor.port=5555" \
+    	-e "cadvisor-port=5555" \
     	-v /proc:/proc_host:ro \
     	-v /var/lib/docker:/var/lib/docker:ro \
     	-v /dev:/dev_host:ro \
