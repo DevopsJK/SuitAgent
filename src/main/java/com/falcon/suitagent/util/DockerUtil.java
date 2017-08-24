@@ -150,7 +150,9 @@ public class DockerUtil {
         if (StringUtils.isNotEmpty(configContent)){
             JSONObject config = JSON.parseObject(configContent);
             JSONObject net = config.getJSONObject("NetworkSettings").getJSONObject("Networks");
-            return net.get("host") != null;
+            if (net != null){
+                return net.get("host") != null;
+            }
         }
         return false;
     }
