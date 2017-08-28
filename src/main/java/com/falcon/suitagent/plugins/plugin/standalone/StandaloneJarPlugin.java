@@ -67,7 +67,7 @@ public class StandaloneJarPlugin implements JMXPlugin {
             CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
             String msg = executeResult.msg;
             for (String s : msg.split("\n")) {
-                Pattern pattern = Pattern.compile("-cp\\s+(/.*).jar");
+                Pattern pattern = Pattern.compile("-cp\\s+(/(\\w*\\d*)*(\\w*\\d*([-_.*><!^;:,`~&])\\w*\\d*)*)*\\.jar");
                 Matcher matcher = pattern.matcher(s);
                 if (matcher.find()){
                     String find = matcher.group();
