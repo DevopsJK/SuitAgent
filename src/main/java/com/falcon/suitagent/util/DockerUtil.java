@@ -126,6 +126,21 @@ public class DockerUtil {
     }
 
     /**
+     * 获取容器主机名
+     * @param containerId
+     * @return
+     */
+    public static String getHostName(String containerId){
+        try {
+            ContainerInfo containerInfo = docker.inspectContainer(containerId);
+            return containerInfo.config().hostname();
+        } catch (Exception e) {
+            log.error("",e);
+        }
+        return "";
+    }
+
+    /**
      * 获取容器IP地址
      * @param containerId
      * 容器ID
