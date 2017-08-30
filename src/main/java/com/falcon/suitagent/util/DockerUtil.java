@@ -141,9 +141,7 @@ public class DockerUtil {
             ContainerInfo containerInfo = docker.inspectContainer(containerId);
             ImmutableMap<String, AttachedNetwork> networks =  containerInfo.networkSettings().networks();
             if (networks != null && !networks.isEmpty()){
-                for (String key : networks.keySet()) {
-                    return networks.get(key).ipAddress();
-                }
+                return networks.get(networks.keySet().asList().get(0)).ipAddress();
             }else {
                 log.warn("容器{}无Networks配置",containerInfo.name());
             }
