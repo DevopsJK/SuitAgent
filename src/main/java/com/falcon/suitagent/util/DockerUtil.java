@@ -39,7 +39,7 @@ import java.util.List;
 @Slf4j
 public class DockerUtil {
 
-    public static final String PROC_HOST_VOLUME = "/proc";
+    private static final String PROC_HOST_VOLUME = "/proc";
     private static DockerClient docker = null;
     static {
         try {
