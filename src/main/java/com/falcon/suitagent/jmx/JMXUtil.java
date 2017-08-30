@@ -70,9 +70,8 @@ public class JMXUtil {
             for (ContainerProcInfoToHost containerProcInfoToHost : containerProcInfoToHosts) {
                 String appName = DockerUtil.getJavaContainerAppName(containerProcInfoToHost.getContainerId());
                 if (appName != null){//只采集指定了appName的容器(必须通过docker run命令的-e参数执行应用名，例如 docker run -e "appName=suitAgent")
-                    String containerHostName = DockerUtil.getHostName(containerProcInfoToHost.getContainerId());
-                    //添加hostName到appName
-                    appName = appName + "-" + containerHostName;
+                    //添加id到appName
+                    appName = appName + "-" + containerProcInfoToHost.getContainerId().substring(0,12);
                     String tmpDir = containerProcInfoToHost.getProcPath() + "/" + "tmp";
                     File file_tmpDir = new File(tmpDir);
                     if (file_tmpDir.exists()){
