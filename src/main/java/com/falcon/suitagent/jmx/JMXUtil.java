@@ -91,7 +91,7 @@ public class JMXUtil {
                                         String cmd = HexUtil.filter(FileUtil.getTextFileContent(file_hsperfDatum.getAbsolutePath() + "/" + pidFiles[0]));
                                         if ("*".equals(serverName)){
                                             javaExecCommandInfos.add(new JavaExecCommandInfo(appName,containerIp,cmd));
-                                        }else if (hasContainsServerName(cmd,serverName)){
+                                        }else if (hasContainsServerNameForContainer(cmd,serverName)){
                                             javaExecCommandInfos.add(new JavaExecCommandInfo(appName,containerIp,cmd));
                                         }
                                     }else if (pidFiles.length > 1){ //容器中若有多个java进程，但一个容器只有一个appName，所以用MD5编码命令行的方式进行命名
@@ -99,7 +99,7 @@ public class JMXUtil {
                                             String cmd = HexUtil.filter(FileUtil.getTextFileContent(file_hsperfDatum.getAbsolutePath() + "/" + pidFile));
                                             if ("*".equals(serverName)){
                                                 javaExecCommandInfos.add(new JavaExecCommandInfo(appName + "-" + MD5Util.getMD5(cmd),containerIp,cmd));
-                                            }else if (hasContainsServerName(cmd,serverName)){
+                                            }else if (hasContainsServerNameForContainer(cmd,serverName)){
                                                 javaExecCommandInfos.add(new JavaExecCommandInfo(appName + "-" + MD5Util.getMD5(cmd),containerIp,cmd));
                                             }
                                         }
@@ -159,6 +159,27 @@ public class JMXUtil {
             log.error("",e);
             return false;
         }
+    }
+
+    /**
+     * 判断指定的目标服务名是否在探测的CMD中
+     * @param cmd
+     * @param serverName
+     * @return
+     */
+    public static boolean hasContainsServerNameForContainer(String cmd,String serverName){
+        if (StringUtils.isEmpty(serverName)){
+            return false;
+        }
+        boolean has = true;
+        List<String> displaySplit = Arrays.asList(cmd.split("\\s+"));
+        for (String s : serverName.split("\\s+")) {
+            if (displaySplit.stream().filter(str -> str.contains(s)).count() == 0){
+                has = false;
+                break;
+            }
+        }
+        return has;
     }
 
     /**
