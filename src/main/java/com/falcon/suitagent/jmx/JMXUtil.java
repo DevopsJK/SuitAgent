@@ -97,10 +97,12 @@ public class JMXUtil {
                                     }else if (pidFiles.length > 1){ //容器中若有多个java进程，但一个容器只有一个appName，所以用MD5编码命令行的方式进行命名
                                         for (String pidFile : pidFiles) {
                                             String cmd = HexUtil.filter(FileUtil.getTextFileContent(file_hsperfDatum.getAbsolutePath() + "/" + pidFile));
+                                            String jmxPort = getJMXPort(cmd);
+                                            String sign = jmxPort == null ? "-NonJmxPort" : "-JP_" + jmxPort;
                                             if ("*".equals(serverName)){
-                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + "-" + MD5Util.getMD5(cmd),containerIp,cmd));
+                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + sign + MD5Util.getMD5(cmd),containerIp,cmd));
                                             }else if (hasContainsServerNameForContainer(cmd,serverName)){
-                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + "-" + MD5Util.getMD5(cmd),containerIp,cmd));
+                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + sign + MD5Util.getMD5(cmd),containerIp,cmd));
                                             }
                                         }
                                     }
@@ -210,7 +212,6 @@ public class JMXUtil {
      * @return
      */
     public static String getJMXPort(int pid){
-        String jmxPortOpt = "-Dcom.sun.management.jmxremote.port";
         String cmdForMac = "ps u -p " + pid;
         String cmdForLinux = "cat /proc/" + pid + "/cmdline";
         try {
@@ -224,21 +225,30 @@ public class JMXUtil {
                 return null;
             }
 
-            String msg = result.msg;
-            String port = null;
-            if (OSUtil.isLinux()){
-                port = getJMXConfigValueForLinux(msg,jmxPortOpt + "=\\d+",jmxPortOpt + "=");
-            }else if (OSUtil.isMac()){
-                port = getJMXConfigValueForMac(msg,jmxPortOpt);
-            }
-            if (port == null){
-                log.warn("未找到JMX端口号");
-            }
-            return port;
+            return getJMXPort(result.msg);
         } catch (IOException e) {
             log.error("",e);
             return null;
         }
+    }
+
+    /**
+     * 获取JMX Remote端口号
+     * @param cmd
+     * @return
+     */
+    public static String getJMXPort(String cmd){
+        String jmxPortOpt = "-Dcom.sun.management.jmxremote.port";
+        String port = null;
+        if (OSUtil.isLinux()){
+            port = getJMXConfigValueForLinux(cmd,jmxPortOpt + "=\\d+",jmxPortOpt + "=");
+        }else if (OSUtil.isMac()){
+            port = getJMXConfigValueForMac(cmd,jmxPortOpt);
+        }
+        if (port == null){
+            log.warn("未找到JMX端口号");
+        }
+        return port;
     }
 
 }
