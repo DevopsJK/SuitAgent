@@ -98,9 +98,9 @@ public class JMXUtil {
                                         for (String pidFile : pidFiles) {
                                             String cmd = HexUtil.filter(FileUtil.getTextFileContent(file_hsperfDatum.getAbsolutePath() + "/" + pidFile));
                                             if ("*".equals(serverName)){
-                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + MD5Util.getMD5(cmd),containerIp,cmd));
-                                            }else if (cmd.contains(serverName)){
-                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + MD5Util.getMD5(cmd),containerIp,cmd));
+                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + "-" + MD5Util.getMD5(cmd),containerIp,cmd));
+                                            }else if (hasContainsServerName(cmd,serverName)){
+                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + "-" + MD5Util.getMD5(cmd),containerIp,cmd));
                                             }
                                         }
                                     }
