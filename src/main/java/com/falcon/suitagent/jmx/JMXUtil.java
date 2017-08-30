@@ -91,7 +91,7 @@ public class JMXUtil {
                                         String cmd = HexUtil.filter(FileUtil.getTextFileContent(file_hsperfDatum.getAbsolutePath() + "/" + pidFiles[0]));
                                         if ("*".equals(serverName)){
                                             javaExecCommandInfos.add(new JavaExecCommandInfo(appName,containerIp,cmd));
-                                        }else if (cmd.contains(serverName)){
+                                        }else if (hasContainsServerName(cmd,serverName)){
                                             javaExecCommandInfos.add(new JavaExecCommandInfo(appName,containerIp,cmd));
                                         }
                                     }else if (pidFiles.length > 1){ //容器中若有多个java进程，但一个容器只有一个appName，所以用MD5编码命令行的方式进行命名
