@@ -100,9 +100,9 @@ public class JMXUtil {
                                             String jmxPort = getJMXPort(cmd);
                                             String sign = jmxPort == null ? "-NonJmxPort" : "-JP_" + jmxPort;
                                             if ("*".equals(serverName)){
-                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + sign + MD5Util.getMD5(cmd),containerIp,cmd));
+                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + sign,containerIp,cmd));
                                             }else if (hasContainsServerNameForContainer(cmd,serverName)){
-                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + sign + MD5Util.getMD5(cmd),containerIp,cmd));
+                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + sign,containerIp,cmd));
                                             }
                                         }
                                     }
