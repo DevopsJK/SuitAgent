@@ -108,7 +108,7 @@ public class JMXUtil {
                             }
                         }
                     }else {
-                        log.error("目录不存在：{}",tmpDir);
+                        log.error("目录{}不存在或无访问权限",tmpDir);
                     }
                 }
             }

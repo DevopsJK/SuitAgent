@@ -21,14 +21,15 @@ package com.falcon.suitagent.util;
  * long.qian@msxf.com 2017-08-04 16:53 创建
  */
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
-import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.vo.docker.ContainerProcInfoToHost;
+import com.google.common.collect.ImmutableMap;
+import com.spotify.docker.client.DefaultDockerClient;
+import com.spotify.docker.client.DockerClient;
+import com.spotify.docker.client.messages.AttachedNetwork;
+import com.spotify.docker.client.messages.Container;
+import com.spotify.docker.client.messages.ContainerInfo;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,40 +39,15 @@ import java.util.List;
 @Slf4j
 public class DockerUtil {
 
-    public static final String DOCKER_VOLUME = "/var/lib/docker";
-    public static final String DOCKER_CONTAINER_VOLUME = DOCKER_VOLUME + "/containers";
-    public static final String PROC_HOST_VOLUME = "/proc_host";
-
-    /**
-     * 判断当前容器环境是否有有效的目录挂载
-     * @return
-     */
-    public static boolean hasValidDockerVolume(){
-        if (!AgentConfiguration.INSTANCE.isDockerRuntime()){
-            return false;
+    public static final String PROC_HOST_VOLUME = "/proc";
+    private static DockerClient docker = null;
+    static {
+        try {
+            docker = new DefaultDockerClient("unix:///var/run/docker.sock");
+        } catch (Exception e) {
+            log.error("docker client初始化失败，可能未挂在/var/run目录或无文件/var/run/docker.sock的访问权限",e);
+            throw e;
         }
-        File file_dockerContainerDir = new File(DOCKER_CONTAINER_VOLUME);
-        if (!file_dockerContainerDir.exists()){
-            log.error("必须指定docker run参数：-v /var/lib/docker:/var/lib/docker:ro");
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * 判断是否存在容器目录
-     * @return
-     */
-    private static boolean isExistContainerDir(){
-        if (hasValidDockerVolume()){
-            File file_containers = new File(DOCKER_CONTAINER_VOLUME);
-            if (file_containers.exists()){
-                return true;
-            }else {
-                log.error("目录不存在：{}",DOCKER_CONTAINER_VOLUME);
-            }
-        }
-        return false;
     }
 
     /**
@@ -80,18 +56,16 @@ public class DockerUtil {
      */
     public static List<ContainerProcInfoToHost> getAllHostContainerProcInfos(){
         List<ContainerProcInfoToHost> procInfoToHosts = new ArrayList<>();
-        if (isExistContainerDir()){
-            File file_containers = new File(DOCKER_CONTAINER_VOLUME);
-            String[] containerIds = file_containers.list();
-            if (containerIds != null) {
-                for (String containerId : containerIds) {
-                    String configContent = getConfigFileContent(containerId);
-                    if (StringUtils.isNotEmpty(configContent)){
-                        JSONObject config = JSON.parseObject(configContent);
-                        String pid = config.getJSONObject("State").getString("Pid");
-                        procInfoToHosts.add(new ContainerProcInfoToHost(containerId,PROC_HOST_VOLUME + "/" + pid + "/root",pid));
-                    }
+        if (docker != null){
+            try {
+                List<Container> containers = docker.listContainers(DockerClient.ListContainersParam.withStatusRunning());
+                for (Container container : containers) {
+                    ContainerInfo info = docker.inspectContainer(container.id());
+                    String pid = String.valueOf(info.state().pid());
+                    procInfoToHosts.add(new ContainerProcInfoToHost(container.id(),PROC_HOST_VOLUME + "/" + pid + "/root",pid));
                 }
+            } catch (Exception e) {
+                log.error("",e);
             }
         }
         return procInfoToHosts;
@@ -106,39 +80,30 @@ public class DockerUtil {
      * @return
      * 若未指定应用名称或获取失败返回null
      */
-    public static String getJavaContainerAppName(String containerId){
-        String configContent = getConfigFileContent(containerId);
-        if (StringUtils.isNotEmpty(configContent)){
-            if (!StringUtils.isEmpty(configContent)){
-                JSONObject config = JSON.parseObject(configContent);
-                JSONArray env = config.getJSONObject("Config").getJSONArray("Env");
-                if (env != null){
-                    for (Object o : env) {
-                        String e = (String) o;
-                        String[] split = e.split(e.contains("=") ? "=" : ":");
-                        if (split.length == 2){
-                            String key = split[0];
-                            String value = split[1];
-                            if ("appName".equals(key)){
-                                return value;
-                            }
+    public static String getJavaContainerAppName(String containerId) throws InterruptedException {
+
+        try {
+            ContainerInfo containerInfo = docker.inspectContainer(containerId);
+            List<String> env = containerInfo.config().env();
+            if (env != null){
+                for (String s : env) {
+                    String[] split = s.split(s.contains("=") ? "=" : ":");
+                    if (split.length == 2){
+                        String key = split[0];
+                        String value = split[1];
+                        if ("appName".equals(key)){
+                            return value;
                         }
                     }
                 }
             }
+        } catch (Exception e) {
+            log.error("",e);
         }
+
         return null;
     }
 
-    /**
-     * 获取容器配置内容
-     * @param containerId
-     * @return
-     */
-    private static String getConfigFileContent(String containerId){
-        String configPath = DOCKER_CONTAINER_VOLUME + "/" + containerId + "/" + "config.v2.json";
-        return FileUtil.getTextFileContent(configPath);
-    }
 
     /**
      * 容器网络模式是否为host模式
@@ -146,15 +111,16 @@ public class DockerUtil {
      * @return
      */
     public static boolean isHostNet(String containerId){
-        String configContent = getConfigFileContent(containerId);
-        if (StringUtils.isNotEmpty(configContent)){
-            JSONObject config = JSON.parseObject(configContent);
-            JSONObject net = config.getJSONObject("NetworkSettings").getJSONObject("Networks");
-            if (net != null){
-                return net.get("host") != null;
+        try {
+            ContainerInfo containerInfo = docker.inspectContainer(containerId);
+            ImmutableMap<String, AttachedNetwork> networks =  containerInfo.networkSettings().networks();
+            if (networks != null && !networks.isEmpty()){
+                return networks.get("host") != null && StringUtils.isNotEmpty(networks.get("host").ipAddress());
             }else {
-                log.warn("未找到Networks配置");
+                log.warn("容器{}无Networks配置",containerInfo.name());
             }
+        } catch (Exception e) {
+            log.error("",e);
         }
         return false;
     }
@@ -167,20 +133,24 @@ public class DockerUtil {
      * 1、获取失败返回null
      * 2、host网络模式直接返回宿主机IP
      */
-    public static String getContainerIp(String containerId) throws Exception {
-        if (isHostNet(containerId)){
-            return HostUtil.getHostIp();
-        }
-        String configContent = getConfigFileContent(containerId);
-        if (StringUtils.isNotEmpty(configContent)){
-            JSONObject config = JSON.parseObject(configContent);
-            JSONObject net = config.getJSONObject("NetworkSettings").getJSONObject("Networks");
-            if (net != null){
-                return net.keySet().stream().map(net::getJSONObject).findFirst().map(netConfig -> netConfig.getString("IPAddress")).orElse(null);
-            }else {
-                log.warn("未找到Networks配置");
+    public static String getContainerIp(String containerId){
+        try {
+            if (isHostNet(containerId)){
+                return HostUtil.getHostIp();
             }
+            ContainerInfo containerInfo = docker.inspectContainer(containerId);
+            ImmutableMap<String, AttachedNetwork> networks =  containerInfo.networkSettings().networks();
+            if (networks != null && !networks.isEmpty()){
+                for (String key : networks.keySet()) {
+                    return networks.get(key).ipAddress();
+                }
+            }else {
+                log.warn("容器{}无Networks配置",containerInfo.name());
+            }
+        } catch (Exception e) {
+            log.error("",e);
         }
+
         return null;
     }
 }

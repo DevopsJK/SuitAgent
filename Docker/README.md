@@ -14,7 +14,6 @@
     sudo docker run -d \
     	-e "cadvisor_port=5555" \
     	-v /proc:/proc_host:ro \
-    	-v /var/lib/docker:/var/lib/docker:ro \
     	-v /dev:/dev_host:ro \
     	-v /var/log/suitagent:/opt/falcon-agent/logs:rw \
     	-v /var/log/suitagent/falcon-agent:/opt/falcon-agent/falcon/agent/var/:rw \
@@ -27,7 +26,6 @@
     # 2、不指定cAdvisor，SuitAgent将会启动内置的cAdvisor服务：
     sudo docker run -d \
     	-v /proc:/proc_host:ro \
-    	-v /var/lib/docker:/var/lib/docker:ro \
     	-v /dev:/dev_host:ro \
     	-v /var/log/suitagent:/opt/falcon-agent/logs:rw \
     	-v /var/log/suitagent/falcon-agent:/opt/falcon-agent/falcon/agent/var/:rw \

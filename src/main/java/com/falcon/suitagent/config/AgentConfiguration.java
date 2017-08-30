@@ -38,7 +38,7 @@ public enum  AgentConfiguration {
     private String agentPushUrl = null;
 
     /**
-     * 插件配置的目录
+     * 插件配置的目录r
      */
     private String pluginConfPath;
 
