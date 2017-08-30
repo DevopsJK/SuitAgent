@@ -46,15 +46,13 @@ public class FileUtil {
             log.error("文件{}不存在",fileName);
             return "";
 		}
-		try {
-            FileInputStream fis = new FileInputStream(f);
-            InputStreamReader read = new InputStreamReader(fis,"UTF-8");
-            BufferedReader reader = new BufferedReader(read);
-            String line = "";
+		try (FileInputStream fis = new FileInputStream(f);
+             InputStreamReader read = new InputStreamReader(fis,"UTF-8");
+             BufferedReader reader = new BufferedReader(read);){
+            String line;
             while((line = reader.readLine()) != null){
                 text.append(line).append("\n");
             }
-            reader.close();
 		} catch (Exception e) {
             log.error("文件读取失败，请检查是否有文件读取权限，或指定文件是否损坏等",e);
 		}
@@ -80,23 +78,21 @@ public class FileUtil {
         if(fs == null){
             return new ArrayList<>();
         }
-		try {
-			for (File file : fs) {
+        for (File file : fs) {
+            try (FileInputStream fis = new FileInputStream(file);
+                 InputStreamReader read = new InputStreamReader(fis,"UTF-8");
+                 BufferedReader reader = new BufferedReader(read);){
                 StringBuilder text = new StringBuilder();
-                FileInputStream fis = new FileInputStream(file);
-                InputStreamReader read = new InputStreamReader(fis,"UTF-8");
-                BufferedReader reader = new BufferedReader(read);
-                String line = "";
+                String line;
                 while((line = reader.readLine()) != null){
                     text.append(line).append("\n");
                 }
-				filesText.add(text.toString());
-				reader.close();
-			}
-		} catch (Exception e) {
-            log.error("",e);
-            return new ArrayList<>();
-		}
+                filesText.add(text.toString());
+            } catch (Exception e) {
+                log.error("",e);
+                return new ArrayList<>();
+            }
+        }
 		return filesText;
 	}
 
@@ -126,15 +122,13 @@ public class FileUtil {
                 log.error("文件读取失败，请检查是否有文件读取权限，或指定文件是否损坏等",e);
 			}
 		}
-		try {
-			FileInputStream fis = new FileInputStream(f);
-            InputStreamReader read = new InputStreamReader(fis,"UTF-8");
-            BufferedReader reader = new BufferedReader(read);
-            String line = "";
+		try (FileInputStream fis = new FileInputStream(f);
+             InputStreamReader read = new InputStreamReader(fis,"UTF-8");
+             BufferedReader reader = new BufferedReader(read);){
+            String line;
             while((line = reader.readLine()) != null){
                 text.append(line).append("\n");
             }
-			reader.close();
 		} catch (Exception e) {
             log.error("",e);
             return "文件读取失败，请检查是否有文件读取权限，或指定文件是否损坏等";
@@ -170,13 +164,10 @@ public class FileUtil {
 				return false;
 			}
 		}
-		FileOutputStream fos;
-		try {
-            fos = new FileOutputStream(f, append);
-            OutputStreamWriter write = new OutputStreamWriter(fos,"UTF-8");
-            BufferedWriter writer = new BufferedWriter(write);
+		try (FileOutputStream fos = new FileOutputStream(f, append);
+             OutputStreamWriter write = new OutputStreamWriter(fos,"UTF-8");
+             BufferedWriter writer = new BufferedWriter(write);){
 			writer.write(text);
-			writer.close();
 			return true;
 		} catch (Exception e) {
             log.error("",e);
@@ -196,13 +187,10 @@ public class FileUtil {
         if(!file.exists()){
             return false;
         }
-        FileOutputStream fos;
-        try {
-            fos = new FileOutputStream(file, append);
-            OutputStreamWriter write = new OutputStreamWriter(fos,"UTF-8");
-            BufferedWriter writer = new BufferedWriter(write);
+        try (FileOutputStream fos = new FileOutputStream(file, append);
+             OutputStreamWriter write = new OutputStreamWriter(fos,"UTF-8");
+             BufferedWriter writer = new BufferedWriter(write);){
             writer.write(text);
-            writer.close();
             return true;
         } catch (Exception e) {
             log.error("",e);
@@ -216,19 +204,21 @@ public class FileUtil {
      * @param file
      */
     public static boolean inputStreamToFile(InputStream ins,File file) {
-        try {
-            OutputStream os = new FileOutputStream(file);
+        try (OutputStream os = new FileOutputStream(file);){
             int bytesRead = 0;
             byte[] buffer = new byte[8192];
             while ((bytesRead = ins.read(buffer, 0, 8192)) != -1) {
                 os.write(buffer, 0, bytesRead);
             }
-            os.close();
-            ins.close();
             return true;
         } catch (Exception e) {
             log.error("",e);
             return false;
+        }finally {
+            try {
+                ins.close();
+            } catch (IOException ignored) {
+            }
         }
     }
 
