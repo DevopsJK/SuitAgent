@@ -114,6 +114,8 @@ public class JMXUtil {
                     }else {
                         log.error("目录{}不存在或无访问权限",tmpDir);
                     }
+                }else {
+                    log.warn("未找到容器{}的appName",containerProcInfoToHost.getContainerId());
                 }
             }
         }
