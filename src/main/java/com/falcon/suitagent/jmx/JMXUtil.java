@@ -129,6 +129,9 @@ public class JMXUtil {
      */
     public static List<VirtualMachineDescriptor> getVmDescByServerName(String serverName){
         List<VirtualMachineDescriptor> vmDescList = new ArrayList<>();
+        if (StringUtils.isEmpty(serverName)){
+            return vmDescList;
+        }
         List<VirtualMachineDescriptor> vms = VirtualMachine.list();
         for (VirtualMachineDescriptor desc : vms) {
             //java -jar 形式启动的Java应用
@@ -151,6 +154,9 @@ public class JMXUtil {
      * @return
      */
     private static boolean isJSVC(String pid,String serverName){
+        if (StringUtils.isEmpty(serverName)){
+            return false;
+        }
         String name = serverName;
         if (serverName.equals("org.apache.catalina.startup.Bootstrap start")){
             name = "org.apache.catalina.startup.Bootstrap";

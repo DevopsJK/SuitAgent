@@ -14,6 +14,7 @@ import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
 import com.falcon.suitagent.jmx.vo.JMXObjectNameInfo;
 import com.falcon.suitagent.plugins.JMXPlugin;
 import com.falcon.suitagent.plugins.util.CacheUtil;
+import com.falcon.suitagent.util.DockerUtil;
 import com.falcon.suitagent.util.MapUtil;
 import com.falcon.suitagent.util.Maths;
 import com.falcon.suitagent.util.StringUtils;
@@ -230,6 +231,14 @@ public class JMXMetricsValue extends MetricsCommon {
 
                 removeJMXConnectCache(jmxConnectionInfo);
                 continue;
+            }
+
+            //Docker环境，JMX不可用时判断容器是否存在，不存在清除监控
+            if (AgentConfiguration.INSTANCE.isDockerRuntime() && !jmxConnectionInfo.isValid()) {
+                if (!DockerUtil.has12ContainerIdInName(jmxConnectionInfo.getName())){
+                    removeJMXConnectCache(jmxConnectionInfo);
+                    continue;
+                }
             }
 
             //非容器运行环境才进行目录判断（容器环境的连接清除逻辑直接移步JMXManager类）

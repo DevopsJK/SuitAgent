@@ -18,9 +18,10 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXServiceURL;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -36,30 +37,48 @@ import static com.falcon.suitagent.jmx.JMXUtil.getVmDescByServerName;
  */
 @Slf4j
 public class JMXConnection {
-    private static final Map<String,JMXConnectionInfo> connectCacheLibrary = new HashMap<>();//JMX的连接缓存
-    private static final Map<String,Integer> serverConnectCount = new HashMap<>();//记录服务应有的JMX连接数
+    private static final Map<String,JMXConnectionInfo> CONNECT_CACHE_LIBRARY = new ConcurrentHashMap<>();//JMX的连接缓存
+    private static final Map<String,Integer> SERVER_CONNECT_COUNT = new ConcurrentHashMap<>();//记录服务应有的JMX连接数
+    private static final Map<String,List<JavaExecCommandInfo>> CONTAINER_COMMAND_INFO_CACHE = new ConcurrentHashMap<>();
 
     private String serverName;
     private List<JavaExecCommandInfo> commandInfos = new ArrayList<>();
+    private List<JavaExecCommandInfo> containerCommandInfos = new ArrayList<>();
 
     /**
      * 删除JMX连接池连接
-     * @param serverName
-     * JMX服务名
+     * @param connectionServerName
      * @param pid
      * 进程id
      */
-    public static void removeConnectCache(String serverName,int pid){
-        String key = serverName + pid;
-        if(JMXConnection.connectCacheLibrary.remove(key) != null){
-            //删除成功,更新serverConnectCount
-            int count = serverConnectCount.get(serverName);
-            if (count -1 == 0){
-                serverConnectCount.remove(serverName);
-            }else {
-                serverConnectCount.put(serverName,count - 1);
+    public static void removeConnectCache(String connectionServerName,int pid){
+        if (StringUtils.isNotEmpty(connectionServerName)){
+            String key = connectionServerName + pid;
+            if(CONNECT_CACHE_LIBRARY.remove(key) != null || CONNECT_CACHE_LIBRARY.remove(connectionServerName) != null){
+                //删除成功,更新serverConnectCount
+                int count = SERVER_CONNECT_COUNT.get(connectionServerName);
+                if (count -1 == 0){
+                    SERVER_CONNECT_COUNT.remove(connectionServerName);
+                }else {
+                    SERVER_CONNECT_COUNT.put(connectionServerName,count - 1);
+                }
+                log.info("已清除JMX监控: {} , pid: {}",connectionServerName,pid);
             }
-            log.info("已清除JMX监控: {} , pid: {}",serverName,pid);
+            Set<String> serverNameKeys = CONTAINER_COMMAND_INFO_CACHE.keySet();
+            for (String serverNameKey : serverNameKeys) {
+                List<JavaExecCommandInfo> commandInfoList = CONTAINER_COMMAND_INFO_CACHE.get(serverNameKey);
+                for (int i = 0; i < commandInfoList.size(); i++) {
+                    JavaExecCommandInfo commandInfo = commandInfoList.get(i);
+                    if (commandInfo.getAppName().equals(connectionServerName)){
+                        if (!commandInfoList.remove(commandInfo)){
+                            log.error("应该被清除的JMX监控:{},清除缓存数据失败",connectionServerName);
+                        }else {
+                            log.info("已清除JMX监控: {}",connectionServerName);
+                        }
+                    }
+                }
+                CONTAINER_COMMAND_INFO_CACHE.put(serverNameKey,commandInfoList);
+            }
         }
     }
 
@@ -72,18 +91,37 @@ public class JMXConnection {
         if (serverName == null){
             return 0;
         }
-        return serverConnectCount.get(serverName);
+        return SERVER_CONNECT_COUNT.get(serverName);
     }
 
     /**
      * 当serverName不为空时，只采集serverName的JMX
      * 当serverName为空时，只采集jmxExecuteCommandInfos中的JMX
      * @param serverName
-     * @param javaExecCommandInfos
+     * @param commandInfoList
      */
-    public JMXConnection(String serverName, List<JavaExecCommandInfo> javaExecCommandInfos) {
+    public JMXConnection(String serverName, List<JavaExecCommandInfo> commandInfoList) {
         this.serverName = serverName;
-        this.commandInfos.addAll(javaExecCommandInfos);
+        this.commandInfos.addAll(commandInfoList);
+
+        if (AgentConfiguration.INSTANCE.isDockerRuntime() && StringUtils.isNotEmpty(serverName)){
+            //初始化Docker环境探测到的对应服务名的Java应用
+            try {
+                List<JavaExecCommandInfo> now = JMXUtil.getHostJavaCommandInfosFromContainer(serverName);
+                List<JavaExecCommandInfo> cache = CONTAINER_COMMAND_INFO_CACHE.get(serverName);
+                if (cache == null){
+                    containerCommandInfos.addAll(now);
+                    CONTAINER_COMMAND_INFO_CACHE.put(serverName,containerCommandInfos);
+                }else if (now.size() > cache.size()){
+                    containerCommandInfos.addAll(now);
+                    CONTAINER_COMMAND_INFO_CACHE.put(serverName,containerCommandInfos);
+                }else {
+                    containerCommandInfos = CONTAINER_COMMAND_INFO_CACHE.get(serverName);
+                }
+            } catch (Exception e) {
+                log.error("",e);
+            }
+        }
     }
 
     /**
@@ -91,7 +129,7 @@ public class JMXConnection {
      * @throws IOException
      */
     public static void closeAll() {
-        for (JMXConnectionInfo jmxConnectionInfo : connectCacheLibrary.values()) {
+        for (JMXConnectionInfo jmxConnectionInfo : CONNECT_CACHE_LIBRARY.values()) {
             jmxConnectionInfo.closeJMXConnector();
         }
     }
@@ -109,18 +147,9 @@ public class JMXConnection {
 
         List<VirtualMachineDescriptor> vmDescList = getVmDescByServerName(serverName);
 
-        List<JavaExecCommandInfo> containerCommandInfos = new ArrayList<>();
-        if (AgentConfiguration.INSTANCE.isDockerRuntime()){
-            try {
-                containerCommandInfos = JMXUtil.getHostJavaCommandInfosFromContainer(serverName);
-            } catch (Exception e) {
-                log.error("",e);
-            }
-        }
-
         List<JMXConnectionInfo> connections = new ArrayList<>();
         if (serverName != null){
-            connections.addAll(connectCacheLibrary.entrySet().
+            connections.addAll(CONNECT_CACHE_LIBRARY.entrySet().
                     stream().
                     filter(entry -> NumberUtils.isNumber(entry.getKey().replace(serverName,""))).
                     map(Map.Entry::getValue).
@@ -128,7 +157,17 @@ public class JMXConnection {
         }
         if (commandInfos != null && !commandInfos.isEmpty()){
             for (JavaExecCommandInfo commandInfo : commandInfos) {
-                connections.addAll(connectCacheLibrary.entrySet().
+                connections.addAll(CONNECT_CACHE_LIBRARY.entrySet().
+                        stream().
+                        filter(entry -> entry.getKey().equals(commandInfo.getAppName())).
+                        map(Map.Entry::getValue).
+                        collect(Collectors.toList()));
+            }
+        }
+
+        if (AgentConfiguration.INSTANCE.isDockerRuntime() && serverName != null){
+            for (JavaExecCommandInfo commandInfo : containerCommandInfos) {
+                connections.addAll(CONNECT_CACHE_LIBRARY.entrySet().
                         stream().
                         filter(entry -> entry.getKey().equals(commandInfo.getAppName())).
                         map(Map.Entry::getValue).
@@ -140,6 +179,7 @@ public class JMXConnection {
             connections.clear();
             clearCacheForServerName();
             clearCacheForAllCommandInfos();
+            clearCacheForAllContainerCommandInfos();
 
             int serverNameCount = 0;
             //serverName-本机Java服务
@@ -165,39 +205,40 @@ public class JMXConnection {
                 //该服务应有的数量++
                 serverNameCount++;
             }
-            //serverName-容器环境
-            for (JavaExecCommandInfo containerCommandInfo : containerCommandInfos) {
-                JMXConnectUrlInfo jmxConnectUrlInfo = getConnectorAddress(containerCommandInfo);
-                if (jmxConnectUrlInfo == null) {
-                    log.error("应用 {} 的JMX连接URL获取失败",containerCommandInfo.getAppName());
-                    //对应的ServerName的JMX连接获取失败，返回该服务JMX连接失败，用于上报不可用记录
-                    connections.add(initBadJMXConnect(containerCommandInfo));
-                    serverNameCount++;
-                    continue;
-                }
+            //serverName-Docker Mon
+            if (AgentConfiguration.INSTANCE.isDockerRuntime() && !containerCommandInfos.isEmpty()){
+                for (JavaExecCommandInfo commandInfo : containerCommandInfos) {
+                    JMXConnectUrlInfo jmxConnectUrlInfo = getConnectorAddress(commandInfo);
+                    if (jmxConnectUrlInfo == null) {
+                        log.error("应用 {} 的JMX连接URL获取失败",commandInfo.getAppName());
+                        //对应的ServerName的JMX连接获取失败，返回该服务JMX连接失败，用于上报不可用记录
+                        connections.add(initBadJMXConnect(commandInfo));
+                        serverNameCount++;
+                        continue;
+                    }
 
-                try {
-                    connections.add(initJMXConnectionInfo(getJMXConnector(jmxConnectUrlInfo),containerCommandInfo));
-                    log.debug("应用 {} JMX 连接已建立",containerCommandInfo.getAppName());
-                } catch (Exception e) {
-                    log.error("JMX 连接获取异常:{}",e.getMessage());
-                    //JMX连接获取失败，添加该服务JMX的不可用记录，用于上报不可用记录
-                    connections.add(initBadJMXConnect(containerCommandInfo));
+                    try {
+                        connections.add(initJMXConnectionInfo(getJMXConnector(jmxConnectUrlInfo),commandInfo));
+                        log.debug("应用 {} JMX 连接已建立",commandInfo.getAppName());
+                    } catch (Exception e) {
+                        log.error("JMX 连接获取异常:{}",e.getMessage());
+                        //JMX连接获取失败，添加该服务JMX的不可用记录，用于上报不可用记录
+                        connections.add(initBadJMXConnect(commandInfo));
+                    }
+                    serverNameCount++;
                 }
-                //该服务应有的数量++
-                serverNameCount++;
             }
 
             //一个serverName可能会有多个实例
             if(serverNameCount > 0){
-                serverConnectCount.put(serverName,serverNameCount);
+                SERVER_CONNECT_COUNT.put(serverName,serverNameCount);
             }else{
                 if (serverName != null){
                     //对应的ServerName的JMX连接获取失败，返回该服务JMX连接失败，用于上报不可用记录
                     JMXConnectionInfo jmxConnectionInfo = new JMXConnectionInfo();
                     jmxConnectionInfo.setValid(false, JMXUnavailabilityType.connectionFailed);
                     connections.add(jmxConnectionInfo);
-                    serverConnectCount.put(serverName,1);
+                    SERVER_CONNECT_COUNT.put(serverName,1);
                 }
             }
 
@@ -210,22 +251,20 @@ public class JMXConnection {
                         log.error("应用 {} 的JMX连接URL获取失败",commandInfo.getAppName());
                         //对应的ServerName的JMX连接获取失败，返回该服务JMX连接失败，用于上报不可用记录
                         connections.add(initBadJMXConnect(commandInfo));
-                        serverConnectCount.put(commandInfo.getAppName(),1);
+                        SERVER_CONNECT_COUNT.put(commandInfo.getAppName(),1);
                         continue;
                     }
 
                     try {
                         connections.add(initJMXConnectionInfo(getJMXConnector(jmxConnectUrlInfo),commandInfo));
                         log.debug("应用 {} JMX 连接已建立",commandInfo.getAppName());
-                        serverConnectCount.put(commandInfo.getAppName(),1);
+                        SERVER_CONNECT_COUNT.put(commandInfo.getAppName(),1);
                     } catch (Exception e) {
                         log.error("JMX 连接获取异常:{}",e.getMessage());
                         //JMX连接获取失败，添加该服务JMX的不可用记录，用于上报不可用记录
                         connections.add(initBadJMXConnect(commandInfo));
-                        serverConnectCount.put(commandInfo.getAppName(),1);
+                        SERVER_CONNECT_COUNT.put(commandInfo.getAppName(),1);
                     }
-                    //该服务应有的数量++
-                    serverNameCount++;
                 }
             }
 
@@ -233,8 +272,8 @@ public class JMXConnection {
 
         //若当前应有的服务实例记录值比获取到的记录值小，重新设置
         if (serverName != null){
-            if(getServerConnectCount(serverName) < vmDescList.size()){
-                serverConnectCount.put(serverName,vmDescList.size());
+            if(getServerConnectCount(serverName) < (vmDescList.size() + containerCommandInfos.size())){
+                SERVER_CONNECT_COUNT.put(serverName,vmDescList.size() + containerCommandInfos.size());
             }
         }
 
@@ -259,10 +298,10 @@ public class JMXConnection {
     private void clearCacheForServerName(){
         //清除当前连接池中的连接
         if (serverName != null){
-            List<String> removeKey = connectCacheLibrary.keySet().stream().filter(key -> NumberUtils.isNumber(key.replace(serverName,""))).collect(Collectors.toList());
+            List<String> removeKey = CONNECT_CACHE_LIBRARY.keySet().stream().filter(key -> NumberUtils.isNumber(key.replace(serverName,""))).collect(Collectors.toList());
             removeKey.forEach(key -> {
-                connectCacheLibrary.get(key).closeJMXConnector();
-                connectCacheLibrary.remove(key);
+                CONNECT_CACHE_LIBRARY.get(key).closeJMXConnector();
+                CONNECT_CACHE_LIBRARY.remove(key);
             });
         }
     }
@@ -274,11 +313,26 @@ public class JMXConnection {
         //清除当前连接池中的连接
         List<String> removeKey = new ArrayList<>();
         for (JavaExecCommandInfo commandInfo : this.commandInfos) {
-            removeKey.addAll(connectCacheLibrary.keySet().stream().filter(key -> key.equals(commandInfo.getAppName())).collect(Collectors.toList()));
+            removeKey.addAll(CONNECT_CACHE_LIBRARY.keySet().stream().filter(key -> key.equals(commandInfo.getAppName())).collect(Collectors.toList()));
         }
         removeKey.forEach(key -> {
-            connectCacheLibrary.get(key).closeJMXConnector();
-            connectCacheLibrary.remove(key);
+            CONNECT_CACHE_LIBRARY.get(key).closeJMXConnector();
+            CONNECT_CACHE_LIBRARY.remove(key);
+        });
+    }
+
+    /**
+     * 清楚连接缓存
+     */
+    private void clearCacheForAllContainerCommandInfos(){
+        //清除当前连接池中的连接
+        List<String> removeKey = new ArrayList<>();
+        for (JavaExecCommandInfo commandInfo : containerCommandInfos) {
+            removeKey.addAll(CONNECT_CACHE_LIBRARY.keySet().stream().filter(key -> key.equals(commandInfo.getAppName())).collect(Collectors.toList()));
+        }
+        removeKey.forEach(key -> {
+            CONNECT_CACHE_LIBRARY.get(key).closeJMXConnector();
+            CONNECT_CACHE_LIBRARY.remove(key);
         });
     }
 
@@ -288,35 +342,29 @@ public class JMXConnection {
     private void clearCacheForCommandInfo(JavaExecCommandInfo commandInfo){
         //清除当前连接池中的连接
         List<String> removeKey = new ArrayList<>();
-        removeKey.addAll(connectCacheLibrary.keySet().stream().filter(key -> key.equals(commandInfo.getAppName())).collect(Collectors.toList()));
+        removeKey.addAll(CONNECT_CACHE_LIBRARY.keySet().stream().filter(key -> key.equals(commandInfo.getAppName())).collect(Collectors.toList()));
         removeKey.forEach(key -> {
-            connectCacheLibrary.get(key).closeJMXConnector();
-            connectCacheLibrary.remove(key);
+            CONNECT_CACHE_LIBRARY.get(key).closeJMXConnector();
+            CONNECT_CACHE_LIBRARY.remove(key);
         });
     }
 
     /**
      * 重置jmx连接
-     * @param force
-     * 是否强制重置
      * @throws IOException
      */
-    synchronized void resetMBeanConnection(boolean force) {
-        //本地JMX连接中根据指定的服务名命中的VirtualMachineDescriptor
-        List<VirtualMachineDescriptor> targetDesc = getVmDescByServerName(serverName);
-        List<JavaExecCommandInfo> containerCommandInfos = new ArrayList<>();
+    synchronized void resetMBeanConnection() {
         if (AgentConfiguration.INSTANCE.isDockerRuntime()){
-            try {
-                containerCommandInfos = JMXUtil.getHostJavaCommandInfosFromContainer(serverName);
-            } catch (Exception e) {
-                log.error("",e);
-            }
+            //清除当前连接池中的连接
+            clearCacheForAllContainerCommandInfos();
         }
 
-        int targetSize = targetDesc.size() + containerCommandInfos.size();
+        //本地JMX连接中根据指定的服务名命中的VirtualMachineDescriptor
+        List<VirtualMachineDescriptor> targetDesc = getVmDescByServerName(serverName);
+        int targetSize = targetDesc.size();
 
         //若命中的target数量大于或等于该服务要求的JMX连接数,则进行重置连接池中的连接
-        if(force || targetSize >= getServerConnectCount(serverName)){
+        if(targetSize >= getServerConnectCount(serverName)){
 
             //清除当前连接池中的连接
             clearCacheForServerName();
@@ -345,41 +393,19 @@ public class JMXConnection {
                 count++;
             }
 
-            //serverName-容器环境
-            for (JavaExecCommandInfo containerCommandInfo : containerCommandInfos) {
-                JMXConnectUrlInfo jmxConnectUrlInfo = getConnectorAddress(containerCommandInfo);
-                if (jmxConnectUrlInfo == null) {
-                    log.error("应用 {} 的JMX连接URL获取失败",containerCommandInfo.getAppName());
-                    //对应的ServerName的JMX连接获取失败，返回该服务JMX连接失败，用于上报不可用记录
-                    initBadJMXConnect(containerCommandInfo);
-                    count++;
-                    continue;
-                }
-
-                try {
-                    initJMXConnectionInfo(getJMXConnector(jmxConnectUrlInfo),containerCommandInfo);
-                    log.debug("应用 {} JMX 连接已建立",containerCommandInfo.getAppName());
-                } catch (Exception e) {
-                    log.error("JMX 连接获取异常:{}",e.getMessage());
-                    //JMX连接获取失败，添加该服务JMX的不可用记录，用于上报不可用记录
-                    initBadJMXConnect(containerCommandInfo);
-                }
-                //该服务应有的数量++
-                count++;
-            }
-
-            serverConnectCount.put(serverName,count);
+            SERVER_CONNECT_COUNT.put(serverName,count);
         }
 
         //若当前应有的服务实例记录值比获取到的记录值小，重新设置
         if(getServerConnectCount(serverName) < targetSize){
-            serverConnectCount.put(serverName,targetSize);
+            SERVER_CONNECT_COUNT.put(serverName,targetSize);
         }
+
 
         //避免重复监控CommandInfo
         if (serverName == null){
             for (JavaExecCommandInfo commandInfo : this.commandInfos) {
-                JMXConnectionInfo cached = connectCacheLibrary.get(commandInfo.getAppName());
+                JMXConnectionInfo cached = CONNECT_CACHE_LIBRARY.get(commandInfo.getAppName());
                 //未缓存或缓存中的对象失效
                 if (cached == null || !cached.isValid()){
                     clearCacheForCommandInfo(commandInfo);
@@ -388,7 +414,7 @@ public class JMXConnection {
                         log.error("应用{}的JMX连接URL获取失败",commandInfo);
                         //对应的ServerName的JMX连接获取失败，返回该服务JMX连接失败，用于上报不可用记录
                         initBadJMXConnect(commandInfo);
-                        serverConnectCount.put(commandInfo.getAppName(),1);
+                        SERVER_CONNECT_COUNT.put(commandInfo.getAppName(),1);
                         continue;
                     }
                     try {
@@ -398,7 +424,7 @@ public class JMXConnection {
                         log.error("JMX 连接获取异常:{}",e);
                         //JMX连接获取失败，添加该服务JMX的不可用记录，用于上报不可用记录
                         initBadJMXConnect(commandInfo);
-                        serverConnectCount.put(commandInfo.getAppName(),1);
+                        SERVER_CONNECT_COUNT.put(commandInfo.getAppName(),1);
                     }
                 }
             }
@@ -459,7 +485,7 @@ public class JMXConnection {
         jmxConnectionInfo.setValid(true,null);
         jmxConnectionInfo.setPid(Integer.parseInt(desc.id()));
 
-        connectCacheLibrary.put(serverName + desc.id(),jmxConnectionInfo);
+        CONNECT_CACHE_LIBRARY.put(serverName + desc.id(),jmxConnectionInfo);
         return jmxConnectionInfo;
     }
 
@@ -480,7 +506,7 @@ public class JMXConnection {
         jmxConnectionInfo.setValid(true,null);
         jmxConnectionInfo.setPid(-1);
 
-        connectCacheLibrary.put(commandInfo.getAppName(),jmxConnectionInfo);
+        CONNECT_CACHE_LIBRARY.put(commandInfo.getAppName(),jmxConnectionInfo);
         return jmxConnectionInfo;
     }
 
@@ -494,7 +520,7 @@ public class JMXConnection {
         jmxConnectionInfo.setConnectionServerName(serverName);
         jmxConnectionInfo.setConnectionQualifiedServerName(desc.displayName());
         jmxConnectionInfo.setPid(Integer.parseInt(desc.id()));
-        connectCacheLibrary.put(serverName + desc.id(),jmxConnectionInfo);
+        CONNECT_CACHE_LIBRARY.put(serverName + desc.id(),jmxConnectionInfo);
         return jmxConnectionInfo;
     }
 
@@ -508,7 +534,7 @@ public class JMXConnection {
         jmxConnectionInfo.setConnectionServerName(commandInfo.getAppName());
         jmxConnectionInfo.setConnectionQualifiedServerName(commandInfo.getAppName());
         jmxConnectionInfo.setPid(-1);
-        connectCacheLibrary.put(commandInfo.getAppName(),jmxConnectionInfo);
+        CONNECT_CACHE_LIBRARY.put(commandInfo.getAppName(),jmxConnectionInfo);
         return jmxConnectionInfo;
     }
 

@@ -43,7 +43,7 @@ public interface JMXPlugin extends Plugin{
      * 请勿返回null
      * 默认返回空集合
      */
-    default List<JavaExecCommandInfo> commandInfos(){
+    default List<JavaExecCommandInfo> commandInfoList(){
         return new ArrayList<>();
     }
 

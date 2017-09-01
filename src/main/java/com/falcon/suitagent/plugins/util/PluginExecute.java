@@ -72,7 +72,7 @@ public class PluginExecute {
                 }
 
                 //Java启动命令行
-                if (!jmxPlugin.commandInfos().isEmpty()){
+                if (!jmxPlugin.commandInfoList().isEmpty()){
                     jobDataMap.put("pluginName",jmxPlugin.pluginName());
                     //jmxServerName设值null，只采集该插件的commandInfos监控
                     jobDataMap.put("jmxServerName",null);

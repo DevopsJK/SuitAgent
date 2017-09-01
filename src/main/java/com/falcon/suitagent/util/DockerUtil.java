@@ -166,4 +166,40 @@ public class DockerUtil {
 
         return null;
     }
+
+    /**
+     * 判断本地所有容器（所有状态）中，是否存在容器id前12位字符串包含在指定的名称中
+     * @param name
+     * @return
+     */
+    public static boolean has12ContainerIdInName(String name) {
+        if (StringUtils.isEmpty(name)){
+            return false;
+        }
+        try {
+            for (String id : getAllHostContainerId()) {
+                if (name.contains(id.substring(0,12))){
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            log.error("",e);
+            return false;
+        }
+        return false;
+    }
+
+    public static List<String> getAllHostContainerId(){
+        List<String> ids = new ArrayList<>();
+        try {
+            List<Container> containerList = docker.listContainers(DockerClient.ListContainersParam.allContainers());
+            for (Container container : containerList) {
+                ids.add(container.id());
+            }
+        } catch (Exception e) {
+            log.error("",e);
+        }
+        return ids;
+    }
+
 }
