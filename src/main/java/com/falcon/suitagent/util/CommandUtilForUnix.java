@@ -121,7 +121,7 @@ public class CommandUtilForUnix {
                 }
                 boolean exeSuccess = process.exitValue() == 0;
                 if(!exeSuccess){
-                    log.error("命令 {} 执行错误：{}",cmd,resultMsg.toString());
+                    log.debug("命令 {} 执行错误：{}",cmd,resultMsg.toString());
                 }
                 return new ExecuteResult(resultMsg.length() > 0 ,exeSuccess,String.valueOf(resultMsg.toString()));
             }else{
@@ -186,20 +186,14 @@ public class CommandUtilForUnix {
             InputStream errorInStream = new BufferedInputStream(process.getErrorStream());
             InputStream processInStream = new BufferedInputStream(process.getInputStream())){
 
-            Callable readTask1 = new Callable<String>(){
-                @Override
-                public String call() throws Exception {
-                    readFromStream(result,errorInStream,resultOutStream);
-                    return "";
-                }
+            Callable readTask1 = (Callable<String>) () -> {
+                readFromStream(result,errorInStream,resultOutStream);
+                return "";
             };
 
-            Callable readTask2 = new Callable<String>() {
-                @Override
-                public String call() throws Exception {
-                    readFromStream(result,processInStream,resultOutStream);
-                    return "";
-                }
+            Callable readTask2 = (Callable<String>) () -> {
+                readFromStream(result,processInStream,resultOutStream);
+                return "";
             };
 
             Future readFuture1 = ExecuteThreadUtil.execute(readTask1);
@@ -249,7 +243,7 @@ public class CommandUtilForUnix {
         String commend = String.format("ping -c %d %s",count,address);
         CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(commend,false,30);
 
-        if(executeResult.isSuccess){
+        if(executeResult.isNormalExit){
             List<Float> times = new ArrayList<>();
             String msg = executeResult.msg;
             for (String line : msg.split("\n")) {
