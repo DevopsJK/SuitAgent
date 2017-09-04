@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static com.falcon.suitagent.jmx.AbstractJmxCommand.getJMXConfigValueForLinux;
@@ -73,46 +74,28 @@ public class JMXUtil {
                     //添加id到appName
                     appName = appName + "-" + containerProcInfoToHost.getContainerId().substring(0,12);
                     String tmpDir = containerProcInfoToHost.getProcPath() + "/" + "tmp";
-                    File file_tmpDir = new File(tmpDir);
-                    if (file_tmpDir.exists()){
-                        String[] hsperfDataDirs = file_tmpDir.list((dir, name) -> name.startsWith("hsperfdata"));
-                        if (hsperfDataDirs != null) {
-                            List<File> files_hsperfData = new ArrayList<>();
-                            for (String hsperfDataDir : hsperfDataDirs) {
-                                files_hsperfData.add(new File(tmpDir + "/" + hsperfDataDir));
+                    List<String> pidFiles = getPidListFromTmp(tmpDir);
+                    if (!pidFiles.isEmpty()) {
+                        String containerIp = DockerUtil.getContainerIp(containerProcInfoToHost.getContainerId());
+                        if (pidFiles.size() == 1){  //容器中只有一个Java进程，直接用appName命名
+                            String cmd = FileUtil.getTextFileContent(containerProcInfoToHost.getProcPath() + "/proc/" + pidFiles.get(0) + "/cmdline");
+                            if ("*".equals(serverName)){
+                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName,containerIp,cmd));
+                            }else if (hasContainsServerNameForContainer(cmd,serverName)){
+                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName,containerIp,cmd));
                             }
-                            for (File file_hsperfDatum : files_hsperfData) {//编译各个hsperfdata目录
-                                if (!file_hsperfDatum.canRead()){
-                                    log.error("没有目录的读取权限：{}",file_hsperfDatum.getAbsolutePath());
-                                    continue;
-                                }
-                                String[] pidFiles = file_hsperfDatum.list();
-                                if (pidFiles != null) {
-                                    String containerIp = DockerUtil.getContainerIp(containerProcInfoToHost.getContainerId());
-                                    if (pidFiles.length == 1){  //容器中只有一个Java进程，直接用appName命名
-                                        String cmd = HexUtil.filter(FileUtil.getTextFileContent(file_hsperfDatum.getAbsolutePath() + "/" + pidFiles[0]));
-                                        if ("*".equals(serverName)){
-                                            javaExecCommandInfos.add(new JavaExecCommandInfo(appName,containerIp,cmd));
-                                        }else if (hasContainsServerNameForContainer(cmd,serverName)){
-                                            javaExecCommandInfos.add(new JavaExecCommandInfo(appName,containerIp,cmd));
-                                        }
-                                    }else if (pidFiles.length > 1){ //容器中若有多个java进程，但一个容器只有一个appName，所以用MD5编码命令行的方式进行命名
-                                        for (String pidFile : pidFiles) {
-                                            String cmd = HexUtil.filter(FileUtil.getTextFileContent(file_hsperfDatum.getAbsolutePath() + "/" + pidFile));
-                                            String jmxPort = getJMXPort(cmd);
-                                            String sign = jmxPort == null ? "-NonJmxPort" : "-JP_" + jmxPort;
-                                            if ("*".equals(serverName)){
-                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + sign,containerIp,cmd));
-                                            }else if (hasContainsServerNameForContainer(cmd,serverName)){
-                                                javaExecCommandInfos.add(new JavaExecCommandInfo(appName + sign,containerIp,cmd));
-                                            }
-                                        }
-                                    }
+                        }else if (pidFiles.size() > 1){ //容器中若有多个java进程，但一个容器只有一个appName，所以用JMX Port命名
+                            for (String pidFile : pidFiles) {
+                                String cmd = FileUtil.getTextFileContent(containerProcInfoToHost.getProcPath() + "/proc/" + pidFile + "/cmdline");
+                                String jmxPort = getJMXPort(cmd);
+                                String sign = jmxPort == null ? "-NonJmxPort" : "-JP_" + jmxPort;
+                                if ("*".equals(serverName)){
+                                    javaExecCommandInfos.add(new JavaExecCommandInfo(appName + sign,containerIp,cmd));
+                                }else if (hasContainsServerNameForContainer(cmd,serverName)){
+                                    javaExecCommandInfos.add(new JavaExecCommandInfo(appName + sign,containerIp,cmd));
                                 }
                             }
                         }
-                    }else {
-                        log.error("目录{}不存在或无访问权限",tmpDir);
                     }
                 }else {
                     log.warn("未找到容器{}的appName",containerProcInfoToHost.getContainerId());
@@ -122,7 +105,47 @@ public class JMXUtil {
         return javaExecCommandInfos;
     }
 
+    /**
+     * 获取/tmp目录下所有的Java进程的pid
+     * @return
+     */
+    public static List<String> getPidListFromTmp(){
+        return getPidListFromTmp("/tmp");
+    }
 
+    /**
+     * 获取{tmpDir}目录下所有的Java进程的pid
+     * @param tmpDir
+     * @return
+     */
+    public static List<String> getPidListFromTmp(String tmpDir){
+        List<String> pidList = new ArrayList<>();
+        if (StringUtils.isNotEmpty(tmpDir)){
+            File file_tmpDir = new File(tmpDir);
+            if (file_tmpDir.exists()){
+                String[] hsperfDataDirs = file_tmpDir.list((dir, name) -> name.startsWith("hsperfdata"));
+                if (hsperfDataDirs != null) {
+                    List<File> files_hsperfData = new ArrayList<>();
+                    for (String hsperfDataDir : hsperfDataDirs) {
+                        files_hsperfData.add(new File(tmpDir + "/" + hsperfDataDir));
+                    }
+                    for (File file_hsperfDatum : files_hsperfData) {
+                        if (!file_hsperfDatum.canRead()){
+                            log.error("没有目录的读取权限：{}",file_hsperfDatum.getAbsolutePath());
+                            continue;
+                        }
+                        String[] pidFiles = file_hsperfDatum.list();
+                        if (pidFiles != null) {
+                            Collections.addAll(pidList, pidFiles);
+                        }
+                    }
+                }
+            }else {
+                log.error("目录{}不存在或无访问权限",tmpDir);
+            }
+        }
+        return pidList;
+    }
 
     /**
      * 获取指定服务名的本地JMX VM 描述对象
@@ -156,7 +179,7 @@ public class JMXUtil {
      * @return
      */
     private static boolean isJSVC(String pid,String serverName){
-        if (StringUtils.isEmpty(serverName)){
+        if (StringUtils.isEmpty(serverName) || AgentConfiguration.INSTANCE.isDockerRuntime()){
             return false;
         }
         String name = serverName;
