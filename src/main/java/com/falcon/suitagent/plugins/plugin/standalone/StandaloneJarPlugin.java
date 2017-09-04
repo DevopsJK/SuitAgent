@@ -8,6 +8,7 @@ package com.falcon.suitagent.plugins.plugin.standalone;
  * guqiu@yiji.com 2016-06-27 16:13 创建
  */
 
+import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.jmx.JMXUtil;
 import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
@@ -61,85 +62,88 @@ public class StandaloneJarPlugin implements JMXPlugin {
     public String jmxServerName() {
         StringBuilder sb = new StringBuilder();
 
-        //jsvc方式的应用，匹配只有一个 -cp xxx.jar 形式的Java应用
-        String cmd = "ps aux | grep jsvc";
-        try {
-            CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
-            String msg = executeResult.msg;
-            for (String s : msg.split("\n")) {
-                Pattern pattern = Pattern.compile("-cp\\s+(/(\\w*\\d*)*(\\w*\\d*([-_.*><!^;:,`~&])\\w*\\d*)*)*\\.jar");
-                Matcher matcher = pattern.matcher(s);
-                if (matcher.find()){
-                    String find = matcher.group();
-                    //将第一个-cp去掉
-                    find = find.replaceFirst("\\s*-cp\\s*","");
-                    //将后面的-cp全部换成:
-                    find = find.replaceAll("\\s*-cp\\s*",":");
-                    if (!find.contains(":")){
-                        File file = new File(find);
-                        if (jmxServerName == null || !jmxServerName.contains(file.getName())){
-                            sb.append(",").append(file.getName());
+        if (!AgentConfiguration.INSTANCE.isDockerRuntime()){
+            //jsvc方式的应用，匹配只有一个 -cp xxx.jar 形式的Java应用
+            String cmd = "ps aux | grep jsvc";
+            try {
+                CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
+                String msg = executeResult.msg;
+                for (String s : msg.split("\n")) {
+                    Pattern pattern = Pattern.compile("-cp\\s+(/(\\w*\\d*)*(\\w*\\d*([-_.*><!^;:,`~&])\\w*\\d*)*)*\\.jar");
+                    Matcher matcher = pattern.matcher(s);
+                    if (matcher.find()){
+                        String find = matcher.group();
+                        //将第一个-cp去掉
+                        find = find.replaceFirst("\\s*-cp\\s*","");
+                        //将后面的-cp全部换成:
+                        find = find.replaceAll("\\s*-cp\\s*",":");
+                        if (!find.contains(":")){
+                            File file = new File(find);
+                            if (jmxServerName == null || !jmxServerName.contains(file.getName())){
+                                sb.append(",").append(file.getName());
+                            }
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                log.error("",e);
+            }
+
+            //遍历当前运行的应用
+            List<VirtualMachineDescriptor> vms = VirtualMachine.list();
+            for (VirtualMachineDescriptor desc : vms) {
+                //去除--参数
+                String displayName = desc.displayName().replaceAll("(\\s+--.*)*","");
+                //java -jar 形式启动的Java应用
+                if(displayName.matches(".*\\.jar")){
+                    Pattern pattern = Pattern.compile(".*\\.jar");
+                    Matcher matcher = pattern.matcher(displayName);
+                    if (matcher.find()){
+                        displayName = matcher.group();
+                    }
+                    File file = new File(displayName);
+                    if (file.exists()){
+                        //文件全路径形式只取文件名
+                        displayName = file.getName();
+                        if (jmxServerName == null || !jmxServerName.contains(displayName)){
+                            sb.append(",").append(displayName);
+                        }
+                    }else {
+                        if (jmxServerName == null || !jmxServerName.contains(displayName)){
+                            sb.append(",").append(displayName);
                         }
                     }
                 }
             }
-        } catch (IOException e) {
-            log.error("",e);
-        }
 
-        //遍历当前运行的应用
-        List<VirtualMachineDescriptor> vms = VirtualMachine.list();
-        for (VirtualMachineDescriptor desc : vms) {
-            //去除--参数
-            String displayName = desc.displayName().replaceAll("(\\s+--.*)*","");
-            //java -jar 形式启动的Java应用
-            if(displayName.matches(".*\\.jar")){
-                Pattern pattern = Pattern.compile(".*\\.jar");
-                Matcher matcher = pattern.matcher(displayName);
-                if (matcher.find()){
-                    displayName = matcher.group();
-                }
-                File file = new File(displayName);
-                if (file.exists()){
-                    //文件全路径形式只取文件名
-                    displayName = file.getName();
-                    if (jmxServerName == null || !jmxServerName.contains(displayName)){
-                        sb.append(",").append(displayName);
-                    }
-                }else {
-                    if (jmxServerName == null || !jmxServerName.contains(displayName)){
-                        sb.append(",").append(displayName);
-                    }
-                }
-            }
-        }
-
-        //遍历配置目录
-        if(!StringUtils.isEmpty(jmxServerDir)){
-            for (String dir : jmxServerDir.split(",")) {
-                if(!StringUtils.isEmpty(dir)){
-                    Path path = Paths.get(dir);
-                    try {
-                        Files.walkFileTree(path,new SimpleFileVisitor<Path>(){
-                            @Override
-                            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                                String fileName = file.getFileName().toString();
-                                String fineNameLower = fileName.toLowerCase();
-                                if(!fineNameLower.contains("-sources") && fineNameLower.endsWith(".jar")){
-                                    if (jmxServerName == null || !jmxServerName.contains(fileName)){
-                                        sb.append(",").append(fileName);
+            //遍历配置目录
+            if(!StringUtils.isEmpty(jmxServerDir)){
+                for (String dir : jmxServerDir.split(",")) {
+                    if(!StringUtils.isEmpty(dir)){
+                        Path path = Paths.get(dir);
+                        try {
+                            Files.walkFileTree(path,new SimpleFileVisitor<Path>(){
+                                @Override
+                                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                                    String fileName = file.getFileName().toString();
+                                    String fineNameLower = fileName.toLowerCase();
+                                    if(!fineNameLower.contains("-sources") && fineNameLower.endsWith(".jar")){
+                                        if (jmxServerName == null || !jmxServerName.contains(fileName)){
+                                            sb.append(",").append(fileName);
+                                        }
                                     }
-                                }
 
-                                return super.visitFile(file, attrs);
-                            }
-                        });
-                    } catch (IOException e) {
-                        log.error("遍历目录 {} 发生异常",jmxServerDir,e);
+                                    return super.visitFile(file, attrs);
+                                }
+                            });
+                        } catch (IOException e) {
+                            log.error("遍历目录 {} 发生异常",jmxServerDir,e);
+                        }
                     }
                 }
             }
         }
+
         sb.append(jmxServerName == null ? "" : "," + jmxServerName);
         return sb.toString();
     }

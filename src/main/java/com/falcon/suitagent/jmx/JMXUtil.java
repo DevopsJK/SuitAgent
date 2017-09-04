@@ -90,7 +90,7 @@ public class JMXUtil {
                                 if (pidFiles != null) {
                                     String containerIp = DockerUtil.getContainerIp(containerProcInfoToHost.getContainerId());
                                     if (pidFiles.length == 1){  //容器中只有一个Java进程，直接用appName命名
-                                        String cmd = HexUtil.filter(FileUtil.getTextFileContent(file_hsperfDatum.getAbsolutePath() + "/" + pidFiles[0]));
+                                        String cmd = FileUtil.getTextFileContent(containerProcInfoToHost.getProcPath() + "/proc/" + pidFiles[0] + "/cmdline");
                                         if ("*".equals(serverName)){
                                             javaExecCommandInfos.add(new JavaExecCommandInfo(appName,containerIp,cmd));
                                         }else if (hasContainsServerNameForContainer(cmd,serverName)){
@@ -98,7 +98,7 @@ public class JMXUtil {
                                         }
                                     }else if (pidFiles.length > 1){ //容器中若有多个java进程，但一个容器只有一个appName，所以用MD5编码命令行的方式进行命名
                                         for (String pidFile : pidFiles) {
-                                            String cmd = HexUtil.filter(FileUtil.getTextFileContent(file_hsperfDatum.getAbsolutePath() + "/" + pidFile));
+                                            String cmd = FileUtil.getTextFileContent(containerProcInfoToHost.getProcPath() + "/proc/" + pidFile + "/cmdline");
                                             String jmxPort = getJMXPort(cmd);
                                             String sign = jmxPort == null ? "-NonJmxPort" : "-JP_" + jmxPort;
                                             if ("*".equals(serverName)){
@@ -156,7 +156,7 @@ public class JMXUtil {
      * @return
      */
     private static boolean isJSVC(String pid,String serverName){
-        if (StringUtils.isEmpty(serverName)){
+        if (StringUtils.isEmpty(serverName) || AgentConfiguration.INSTANCE.isDockerRuntime()){
             return false;
         }
         String name = serverName;
