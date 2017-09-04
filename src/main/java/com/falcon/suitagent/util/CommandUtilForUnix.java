@@ -168,10 +168,10 @@ public class CommandUtilForUnix {
             execTarget = "/bin/sh";
             shList.add(execTarget);
             shList.add("-c");
-            log.debug("执行命令 : {} -c \"{}\"",execTarget,cmd);
+            log.info("执行命令 : {} -c \"{}\"",execTarget,cmd);
         }else{
             shList.add(execTarget);
-            log.debug("执行命令 : {} {}",execTarget,cmd);
+            log.info("执行命令 : {} {}",execTarget,cmd);
         }
         if(cmdSep){
             Collections.addAll(shList, cmd.split("\\s"));
