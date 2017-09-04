@@ -21,7 +21,7 @@ import java.net.Socket;
  * @author guqiu@yiji.com
  */
 @Slf4j
-public class HttpServer extends Thread{
+public class HttpServer extends Thread {
 
     private static final String SHUTDOWN_COMMAND = "/__SHUTDOWN__";
     private boolean shutdown = false;
@@ -44,7 +44,7 @@ public class HttpServer extends Thread{
         try {
             startServer();
         } catch (IOException e) {
-            log.error("web服务启动异常",e);
+            log.error("web服务启动异常", e);
             status = 0;
             System.exit(0);
         }
@@ -52,42 +52,36 @@ public class HttpServer extends Thread{
 
     public void startServer() throws IOException {
         serverSocket = new ServerSocket(port, 10, InetAddress.getByName("0.0.0.0"));
-        log.info("Web服务启动地址:http://{}:{}",InetAddress.getByName("0.0.0.0").getHostName(),serverSocket.getLocalPort());
+        log.info("Web服务启动地址:http://{}:{}", InetAddress.getByName("0.0.0.0").getHostName(), serverSocket.getLocalPort());
         status = 1;
         while (!shutdown) {
-            Socket socket;
-            InputStream input;
-            OutputStream output;
-            try {
-                socket = serverSocket.accept();
-
-                input = socket.getInputStream();
-                output = socket.getOutputStream();
+            try (Socket socket = serverSocket.accept();
+                 InputStream input = socket.getInputStream();
+                 OutputStream output = socket.getOutputStream();) {
                 Request request = new Request(input);
                 request.parse();
                 Response response = new Response(output);
                 response.setRequest(request);
                 shutdown = SHUTDOWN_COMMAND.equals(request.getUri());
-                if(shutdown){
+                if (shutdown) {
                     status = -1;
                     response.send("Shutdown OK");
-                }else{
+                } else {
                     response.doRequest();
                 }
-                socket.close();
             } catch (Exception e) {
-                log.error("Web处理异常",e);
+                log.error("Web处理异常", e);
             }
         }
         try {
             close();
         } catch (Exception e) {
-            log.error("web服务关闭异常",e);
+            log.error("web服务关闭异常", e);
         }
     }
 
     public static void close() throws IOException {
-        if(serverSocket != null && !serverSocket.isClosed()){
+        if (serverSocket != null && !serverSocket.isClosed()) {
             serverSocket.close();
             status = 0;
             log.info("Web 服务已关闭");
