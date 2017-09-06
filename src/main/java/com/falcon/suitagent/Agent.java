@@ -320,7 +320,7 @@ public class Agent extends Thread{
             PropertyConfigurator.configure(System.getProperty("agent.log4j.conf.path"));
         }
 
-        if (!AgentConfiguration.INSTANCE.isDockerRuntime()){
+        if (AgentConfiguration.INSTANCE.isDockerRuntime()){
             try {
                 //Docker Runtime 环境 6分钟后停止console日志的输出
                 new Thread(() -> {
