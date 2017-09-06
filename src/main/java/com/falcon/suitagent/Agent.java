@@ -6,7 +6,6 @@ package com.falcon.suitagent;
 
 import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.jmx.JMXConnection;
-import com.falcon.suitagent.plugins.job.DockerLogJob;
 import com.falcon.suitagent.plugins.util.PluginExecute;
 import com.falcon.suitagent.plugins.util.PluginLibraryHelper;
 import com.falcon.suitagent.util.*;
@@ -15,8 +14,12 @@ import com.falcon.suitagent.watcher.ConfDirWatcher;
 import com.falcon.suitagent.watcher.PluginPropertiesWatcher;
 import com.falcon.suitagent.web.HttpServer;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.log4j.Logger;
+import org.apache.log4j.Priority;
 import org.apache.log4j.PropertyConfigurator;
-import org.quartz.*;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.SchedulerFactory;
 import org.quartz.impl.DirectSchedulerFactory;
 
 import java.io.File;
@@ -30,10 +33,9 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 
 import static com.falcon.suitagent.plugins.metrics.MetricsCommon.getEndpointByTrans;
-import static org.quartz.DateBuilder.futureDate;
-import static org.quartz.TriggerBuilder.newTrigger;
 
 /*
  * 修订记录:
@@ -318,18 +320,17 @@ public class Agent extends Thread{
             PropertyConfigurator.configure(System.getProperty("agent.log4j.conf.path"));
         }
 
-        if (AgentConfiguration.INSTANCE.isDockerRuntime()){
+        if (!AgentConfiguration.INSTANCE.isDockerRuntime()){
             try {
                 //Docker Runtime 环境 6分钟后停止console日志的输出
-                JobDetail jobDetail = JobBuilder.newJob(DockerLogJob.class)
-                        .withIdentity("dockerLog-job", "job-dockerLog")
-                        .withDescription("dockerLog-job")
-                        .build();
-                Trigger trigger = newTrigger()
-                        .withIdentity("dockerLog-trigger", "trigger-dockerLog")
-                        .startAt(futureDate(6, DateBuilder.IntervalUnit.MINUTE))
-                        .build();
-                SchedulerUtil.executeScheduleJob(jobDetail,trigger);
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(TimeUnit.MINUTES.toMillis(6));
+                    } catch (InterruptedException e) {
+                        log.error("",e);
+                    }
+                    ((org.apache.log4j.ConsoleAppender) Logger.getRootLogger().getAppender("stdout")).setThreshold(Priority.FATAL);
+                }).start();
             } catch (Exception e) {
                 log.error("",e);
             }
