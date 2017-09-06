@@ -330,7 +330,7 @@ public class Agent extends Thread{
                 //Docker Runtime 环境 6分钟后停止console日志的输出
                 new Thread(() -> {
                     try {
-                        Thread.sleep(TimeUnit.SECONDS.toMillis(6));
+                        Thread.sleep(TimeUnit.MINUTES.toMillis(6));
 
                         ILoggerFactory factory = StaticLoggerBinder.getSingleton().getLoggerFactory();
                         LoggerContext loggerContext = (LoggerContext) factory;
