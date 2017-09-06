@@ -4,6 +4,10 @@
  */
 package com.falcon.suitagent;
 
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
+import ch.qos.logback.core.ConsoleAppender;
 import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.jmx.JMXConnection;
 import com.falcon.suitagent.plugins.util.PluginExecute;
@@ -14,13 +18,13 @@ import com.falcon.suitagent.watcher.ConfDirWatcher;
 import com.falcon.suitagent.watcher.PluginPropertiesWatcher;
 import com.falcon.suitagent.web.HttpServer;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.log4j.Logger;
-import org.apache.log4j.Priority;
 import org.apache.log4j.PropertyConfigurator;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.SchedulerFactory;
 import org.quartz.impl.DirectSchedulerFactory;
+import org.slf4j.ILoggerFactory;
+import org.slf4j.impl.StaticLoggerBinder;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,6 +37,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
 import static com.falcon.suitagent.plugins.metrics.MetricsCommon.getEndpointByTrans;
@@ -325,11 +330,21 @@ public class Agent extends Thread{
                 //Docker Runtime 环境 6分钟后停止console日志的输出
                 new Thread(() -> {
                     try {
-                        Thread.sleep(TimeUnit.MINUTES.toMillis(6));
+                        Thread.sleep(TimeUnit.SECONDS.toMillis(6));
+
+                        ILoggerFactory factory = StaticLoggerBinder.getSingleton().getLoggerFactory();
+                        LoggerContext loggerContext = (LoggerContext) factory;
+                        ch.qos.logback.classic.Logger logger = loggerContext.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+                        Iterator<Appender<ILoggingEvent>> iterator = logger.iteratorForAppenders();
+                        while (iterator.hasNext()) {
+                            Appender<ILoggingEvent> app = iterator.next();
+                            if (app instanceof ConsoleAppender) {
+                                logger.detachAppender(app);
+                            }
+                        }
                     } catch (InterruptedException e) {
                         log.error("",e);
                     }
-                    ((org.apache.log4j.ConsoleAppender) Logger.getRootLogger().getAppender("stdout")).setThreshold(Priority.FATAL);
                 }).start();
             } catch (Exception e) {
                 log.error("",e);
