@@ -6,6 +6,7 @@ package com.falcon.suitagent;
 
 import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.jmx.JMXConnection;
+import com.falcon.suitagent.plugins.job.DockerLogJob;
 import com.falcon.suitagent.plugins.util.PluginExecute;
 import com.falcon.suitagent.plugins.util.PluginLibraryHelper;
 import com.falcon.suitagent.util.*;
@@ -15,9 +16,7 @@ import com.falcon.suitagent.watcher.PluginPropertiesWatcher;
 import com.falcon.suitagent.web.HttpServer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.log4j.PropertyConfigurator;
-import org.quartz.Scheduler;
-import org.quartz.SchedulerException;
-import org.quartz.SchedulerFactory;
+import org.quartz.*;
 import org.quartz.impl.DirectSchedulerFactory;
 
 import java.io.File;
@@ -33,6 +32,8 @@ import java.nio.charset.Charset;
 import java.util.Collection;
 
 import static com.falcon.suitagent.plugins.metrics.MetricsCommon.getEndpointByTrans;
+import static org.quartz.DateBuilder.futureDate;
+import static org.quartz.TriggerBuilder.newTrigger;
 
 /*
  * 修订记录:
@@ -315,6 +316,23 @@ public class Agent extends Thread{
         }else{
             //自定义日志配置文件
             PropertyConfigurator.configure(System.getProperty("agent.log4j.conf.path"));
+        }
+
+        if (AgentConfiguration.INSTANCE.isDockerRuntime()){
+            try {
+                //Docker Runtime 环境 6分钟后停止console日志的输出
+                JobDetail jobDetail = JobBuilder.newJob(DockerLogJob.class)
+                        .withIdentity("dockerLog-job", "job-dockerLog")
+                        .withDescription("dockerLog-job")
+                        .build();
+                Trigger trigger = newTrigger()
+                        .withIdentity("dockerLog-trigger", "trigger-dockerLog")
+                        .startAt(futureDate(6, DateBuilder.IntervalUnit.MINUTE))
+                        .build();
+                SchedulerUtil.executeScheduleJob(jobDetail,trigger);
+            } catch (Exception e) {
+                log.error("",e);
+            }
         }
 
         //启动前进行配置检查
