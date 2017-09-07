@@ -78,7 +78,7 @@ public class JMXUtil {
                     if (!pidFiles.isEmpty()) {
                         String containerIp = DockerUtil.getContainerIp(containerProcInfoToHost.getContainerId());
                         if (pidFiles.size() == 1){  //容器中只有一个Java进程，直接用appName命名
-                            String cmd = FileUtil.getTextFileContent(containerProcInfoToHost.getProcPath() + "/proc/" + pidFiles.get(0) + "/cmdline");
+                            String cmd = HexUtil.filter(FileUtil.getTextFileContent(containerProcInfoToHost.getProcPath() + "/proc/" + pidFiles.get(0) + "/cmdline")," ");
                             if ("*".equals(serverName)){
                                 javaExecCommandInfos.add(new JavaExecCommandInfo(appName,containerIp,cmd));
                             }else if (hasContainsServerNameForContainer(cmd,serverName)){
@@ -86,7 +86,7 @@ public class JMXUtil {
                             }
                         }else if (pidFiles.size() > 1){ //容器中若有多个java进程，但一个容器只有一个appName，所以用JMX Port命名
                             for (String pidFile : pidFiles) {
-                                String cmd = FileUtil.getTextFileContent(containerProcInfoToHost.getProcPath() + "/proc/" + pidFile + "/cmdline");
+                                String cmd = HexUtil.filter(FileUtil.getTextFileContent(containerProcInfoToHost.getProcPath() + "/proc/" + pidFile + "/cmdline")," ");
                                 String jmxPort = getJMXPort(cmd);
                                 String sign = jmxPort == null ? "-NonJmxPort" : "-JP_" + jmxPort;
                                 if ("*".equals(serverName)){

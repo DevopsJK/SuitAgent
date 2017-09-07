@@ -111,4 +111,24 @@ public class HexUtil {
         return sb.toString();
     }
 
+    /**
+     * 过滤字符串，将不可见字符串替换为指定的字符串
+     * @param str
+     * @param replace
+     * @return
+     */
+    public static String filter(String str,String replace){
+        StringBuilder sb = new StringBuilder();
+        for (char c : str.toCharArray()) {
+            if (String.valueOf(c).matches("([a-z]|[A-Z]|\\d|\\s|[\\u4e00-\\u9fa5])+") ||
+                    isSymbol(c) ||
+                    isPunctuation(c)){
+                sb.append(c);
+            }else {
+                sb.append(replace);
+            }
+        }
+        return sb.toString();
+    }
+
 }
