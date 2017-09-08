@@ -21,6 +21,7 @@ package com.falcon.suitagent.util;
  * long.qian@msxf.com 2017-08-04 16:53 创建
  */
 
+import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.vo.docker.ContainerProcInfoToHost;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.docker.client.DefaultDockerClient;
@@ -42,11 +43,13 @@ public class DockerUtil {
     private static final String PROC_HOST_VOLUME = "/proc_host";
     private static DockerClient docker = null;
     static {
-        try {
-            docker = new DefaultDockerClient("unix:///var/run/docker.sock");
-        } catch (Exception e) {
-            log.error("docker client初始化失败，可能未挂在/var/run目录或无文件/var/run/docker.sock的访问权限",e);
-            throw e;
+        if (AgentConfiguration.INSTANCE.isDockerRuntime()){
+            try {
+                docker = new DefaultDockerClient("unix:///var/run/docker.sock");
+            } catch (Exception e) {
+                log.error("docker client初始化失败，可能未挂在/var/run目录或无文件/var/run/docker.sock的访问权限",e);
+                throw e;
+            }
         }
     }
 
