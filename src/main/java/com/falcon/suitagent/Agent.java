@@ -267,6 +267,9 @@ public class Agent extends Thread{
         log.info("关闭线程池");
         ExecuteThreadUtil.shutdown();
 
+        log.info("Close Docker Client");
+        DockerUtil.closeDockerClient();
+
         log.info("服务器关闭成功");
         System.exit(0);
     }

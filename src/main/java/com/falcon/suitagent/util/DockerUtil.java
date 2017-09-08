@@ -50,6 +50,12 @@ public class DockerUtil {
         }
     }
 
+    public static void closeDockerClient(){
+        if (docker != null){
+            docker.close();
+        }
+    }
+
     /**
      * 获取主机上所有运行容器的proc信息
      * @return
