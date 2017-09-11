@@ -61,7 +61,7 @@ public class CacheByTimeUtil {
             if (NumberUtils.isNumber(cacheTime)){
                 CACHE_TIME = Integer.parseInt(cacheTime);
             }else {
-                log.error("DOCKET_CACHE_TIME只能数字：{}",cacheTime);
+                log.error("CACHE_VALID_TIME只能数字：{}",cacheTime);
             }
         }
 
