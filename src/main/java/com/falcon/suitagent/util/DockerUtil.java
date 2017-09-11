@@ -45,12 +45,34 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DockerUtil {
 
     private static final ConcurrentHashMap<String,ConcurrentHashMap<Long,Object>> CATCH = new ConcurrentHashMap<>();
-    private static int CACHE_TIME = 600;//缓存失效时间，默认10分钟
+    private static int CACHE_TIME = 360;//缓存失效时间，默认6分钟
 
     private static final String PROC_HOST_VOLUME = "/proc_host";
     private static DockerClient docker = null;
     static {
         if (AgentConfiguration.INSTANCE.isDockerRuntime()){
+            /*
+                缓存时间设置：
+                优先级：系统变量 > 系统环境变量
+            */
+            String cacheTime = System.getProperty("DOCKET_CACHE_TIME");
+            if (StringUtils.isEmpty(cacheTime)){
+                cacheTime = System.getenv("DOCKET_CACHE_TIME");
+            }
+            if (StringUtils.isNotEmpty(cacheTime)){
+                if (NumberUtils.isNumber(cacheTime)){
+                    CACHE_TIME = Integer.parseInt(cacheTime);
+                }else {
+                    log.error("DOCKET_CACHE_TIME只能数字：{}",cacheTime);
+                }
+            }
+
+            //缓存周期检查任务
+            Thread cacheCheck = new Thread(new CacheCheck());
+            cacheCheck.setName("DockerUtil Cache Check Thread");
+            cacheCheck.setDaemon(true);
+            cacheCheck.start();
+
             try {
                 docker = new DefaultDockerClient("unix:///var/run/docker.sock");
             } catch (Exception e) {
@@ -64,28 +86,6 @@ public class DockerUtil {
         if (docker != null){
             docker.close();
         }
-
-        /*
-            缓存时间设置：
-            优先级：系统变量 > 系统环境变量
-         */
-        String cacheTime = System.getProperty("DOCKET_CACHE_TIME");
-        if (StringUtils.isEmpty(cacheTime)){
-            cacheTime = System.getenv("DOCKET_CACHE_TIME");
-        }
-        if (StringUtils.isNotEmpty(cacheTime)){
-            if (NumberUtils.isNumber(cacheTime)){
-                CACHE_TIME = Integer.parseInt(cacheTime);
-            }else {
-                log.error("DOCKET_CACHE_TIME只能数字：{}",cacheTime);
-            }
-        }
-
-        //缓存周期检查任务
-        Thread cacheCheck = new Thread(new CacheCheck());
-        cacheCheck.setName("DockerUtil Cache Check Thread");
-        cacheCheck.setDaemon(true);
-        cacheCheck.start();
     }
 
     /**
