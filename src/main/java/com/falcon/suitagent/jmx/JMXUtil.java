@@ -64,7 +64,12 @@ public class JMXUtil {
      * @return
      */
     public static List<JavaExecCommandInfo> getHostJavaCommandInfosFromContainer(String serverName) throws Exception {
-        List<JavaExecCommandInfo> javaExecCommandInfos = new ArrayList<>();
+        String cacheKey = "hostJavaCommandInfosFromContainer" + serverName;
+        List<JavaExecCommandInfo> javaExecCommandInfos = (List<JavaExecCommandInfo>) CacheByTimeUtil.getCache(cacheKey);
+        if (javaExecCommandInfos != null){
+            return javaExecCommandInfos;
+        }
+        javaExecCommandInfos = new ArrayList<>();
         if (StringUtils.isNotEmpty(serverName) && AgentConfiguration.INSTANCE.isDockerRuntime()){
             //仅为Docker容器运行环境时有效
             List<ContainerProcInfoToHost> containerProcInfoToHosts = DockerUtil.getAllHostContainerProcInfos();
@@ -102,6 +107,7 @@ public class JMXUtil {
                 }
             }
         }
+        CacheByTimeUtil.setCache(cacheKey,javaExecCommandInfos);
         return javaExecCommandInfos;
     }
 
@@ -119,7 +125,12 @@ public class JMXUtil {
      * @return
      */
     public static List<String> getPidListFromTmp(String tmpDir){
-        List<String> pidList = new ArrayList<>();
+        String cacheKey = "pidListFromTmpDir" + tmpDir;
+        List<String> pidList = (List<String>) CacheByTimeUtil.getCache(cacheKey);
+        if (pidList != null){
+            return pidList;
+        }
+        pidList = new ArrayList<>();
         if (StringUtils.isNotEmpty(tmpDir)){
             File file_tmpDir = new File(tmpDir);
             if (file_tmpDir.exists()){
@@ -144,6 +155,7 @@ public class JMXUtil {
                 log.error("目录{}不存在或无访问权限",tmpDir);
             }
         }
+        CacheByTimeUtil.setCache(cacheKey,pidList);
         return pidList;
     }
 

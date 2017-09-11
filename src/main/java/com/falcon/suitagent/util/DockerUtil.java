@@ -30,13 +30,13 @@ import com.spotify.docker.client.messages.AttachedNetwork;
 import com.spotify.docker.client.messages.Container;
 import com.spotify.docker.client.messages.ContainerInfo;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.math.NumberUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static com.falcon.suitagent.util.CacheByTimeUtil.getCache;
+import static com.falcon.suitagent.util.CacheByTimeUtil.setCache;
 
 /**
  * @author long.qian@msxf.com
@@ -45,34 +45,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DockerUtil {
 
     private static final ConcurrentHashMap<String,ConcurrentHashMap<Long,Object>> CATCH = new ConcurrentHashMap<>();
-    private static int CACHE_TIME = 360;//缓存失效时间，默认6分钟
+
 
     private static final String PROC_HOST_VOLUME = "/proc_host";
     private static DockerClient docker = null;
     static {
         if (AgentConfiguration.INSTANCE.isDockerRuntime()){
-            /*
-                缓存时间设置：
-                优先级：系统变量 > 系统环境变量
-            */
-            String cacheTime = System.getProperty("DOCKET_CACHE_TIME");
-            if (StringUtils.isEmpty(cacheTime)){
-                cacheTime = System.getenv("DOCKET_CACHE_TIME");
-            }
-            if (StringUtils.isNotEmpty(cacheTime)){
-                if (NumberUtils.isNumber(cacheTime)){
-                    CACHE_TIME = Integer.parseInt(cacheTime);
-                }else {
-                    log.error("DOCKET_CACHE_TIME只能数字：{}",cacheTime);
-                }
-            }
-
-            //缓存周期检查任务
-            Thread cacheCheck = new Thread(new CacheCheck());
-            cacheCheck.setName("DockerUtil Cache Check Thread");
-            cacheCheck.setDaemon(true);
-            cacheCheck.start();
-
             try {
                 docker = new DefaultDockerClient("unix:///var/run/docker.sock");
             } catch (Exception e) {
@@ -87,82 +65,6 @@ public class DockerUtil {
             docker.close();
         }
     }
-
-    /**
-     * 缓存检查，设置为守护线程，随JVM消亡而自动消亡
-     */
-    private static class CacheCheck implements Runnable{
-        @Override
-        public void run() {
-           while (true){
-               try {
-                   Thread.sleep(CACHE_TIME * 1000 * 3 + 10000);//检查周期
-                   Set<String> keys = CATCH.keySet();
-                   for (String key : keys) {
-                       if (getCache(key) == null){
-                           CATCH.remove(key);
-                       }
-                   }
-               } catch (Exception e) {
-                   log.error("",e);
-               }
-           }
-        }
-    }
-
-    /**
-     * 获取缓存数据
-     * @param key
-     * @return
-     * 未设置或缓存有效时间已过都会返回null
-     */
-    private static Object getCache(String key) {
-        return getCache(key,CACHE_TIME);
-    }
-
-    /**
-     * 获取缓存数据
-     * @param key
-     * @return
-     * 未设置或缓存有效时间已过都会返回null
-     */
-    private static Object getCache(String key,Integer cacheTime) {
-        if (StringUtils.isNotEmpty(key)){
-            ConcurrentHashMap<Long,Object> cache = CATCH.get(key);
-            if (cache != null){
-                Optional<Long> time = cache.keySet().stream().findFirst();
-                if (time.isPresent()){
-                    long now = System.currentTimeMillis();
-                    if ((now - time.get()) < (cacheTime * 1000)){
-                        return cache.get(time.get());
-                    }else {
-                        //缓存失效
-                        cache.clear();
-                        CATCH.put(key,cache);
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 设置缓存
-     * @param key
-     * @param value
-     */
-    private static void setCache(String key,Object value) {
-        if (StringUtils.isNotEmpty(key) && value != null){
-            ConcurrentHashMap<Long,Object> cache = CATCH.get(key);
-            if (cache == null){
-                cache = new ConcurrentHashMap<>();
-            }
-            cache.clear();
-            cache.put(System.currentTimeMillis(),value);
-            CATCH.put(key,cache);
-        }
-    }
-
 
     /**
      * 获取容器信息
@@ -368,7 +270,7 @@ public class DockerUtil {
         String cacheKey = "allHostContainerIds";
         int cacheTime = 28;//28秒缓存周期，保证一次采集job只需要访问一次docker即可
 
-        List<String> ids = (List<String>) getCache(cacheKey,cacheTime);
+        List<String> ids = (List<String>) getCache(cacheKey);
         if (ids != null){
             return ids;
         }else {
@@ -382,7 +284,7 @@ public class DockerUtil {
         } catch (Exception e) {
             log.error("",e);
         }
-        setCache(cacheKey,ids);
+        setCache(cacheKey,ids,cacheTime);
         return ids;
     }
 
