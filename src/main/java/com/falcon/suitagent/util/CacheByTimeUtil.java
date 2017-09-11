@@ -101,24 +101,26 @@ public class CacheByTimeUtil {
      * 未设置或缓存有效时间已过都会返回null
      */
     public static Object getCache(String key) {
-        if (StringUtils.isNotEmpty(key)){
-            ConcurrentHashMap<Long,CacheValue> cache = CATCH.get(key);
-            if (cache != null){
-                Optional<Long> cacheTime = cache.keySet().stream().findFirst();
-                if (cacheTime.isPresent()){
-                    CacheValue cacheValue = cache.get(cacheTime.get());
-                    long now = System.currentTimeMillis();
-                    if ((now - cacheTime.get()) < (cacheValue.getValidTime() * 1000)){
-                        return cacheValue.getValue();
-                    }else {
-                        //缓存失效
-                        cache.clear();
-                        CATCH.put(key,cache);
+        synchronized (key.intern()){
+            if (StringUtils.isNotEmpty(key)){
+                ConcurrentHashMap<Long,CacheValue> cache = CATCH.get(key);
+                if (cache != null){
+                    Optional<Long> cacheTime = cache.keySet().stream().findFirst();
+                    if (cacheTime.isPresent()){
+                        CacheValue cacheValue = cache.get(cacheTime.get());
+                        long now = System.currentTimeMillis();
+                        if ((now - cacheTime.get()) < (cacheValue.getValidTime() * 1000)){
+                            return cacheValue.getValue();
+                        }else {
+                            //缓存失效
+                            cache.clear();
+                            CATCH.put(key,cache);
+                        }
                     }
                 }
             }
+            return null;
         }
-        return null;
     }
 
     /**
@@ -137,14 +139,16 @@ public class CacheByTimeUtil {
      * @param validTime
      */
     public static void setCache(String key,Object value,int validTime) {
-        if (StringUtils.isNotEmpty(key) && value != null){
-            ConcurrentHashMap<Long,CacheValue> cache = CATCH.get(key);
-            if (cache == null){
-                cache = new ConcurrentHashMap<>();
+        synchronized (key.intern()){
+            if (StringUtils.isNotEmpty(key) && value != null){
+                ConcurrentHashMap<Long,CacheValue> cache = CATCH.get(key);
+                if (cache == null){
+                    cache = new ConcurrentHashMap<>();
+                }
+                cache.clear();
+                cache.put(System.currentTimeMillis(),new CacheValue(validTime,value));
+                CATCH.put(key,cache);
             }
-            cache.clear();
-            cache.put(System.currentTimeMillis(),new CacheValue(validTime,value));
-            CATCH.put(key,cache);
         }
     }
 
