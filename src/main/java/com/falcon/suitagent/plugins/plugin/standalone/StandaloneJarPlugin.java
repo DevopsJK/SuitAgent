@@ -150,15 +150,21 @@ public class StandaloneJarPlugin implements JMXPlugin {
                     String tmpDir = containerProcInfoToHost.getProcPath() + "/" + "tmp";
                     List<String> pidList = JMXUtil.getPidListFromTmp(tmpDir);
                     for (String pid : pidList) {
-                        String cmd = HexUtil.filter(FileUtil.getTextFileContent(containerProcInfoToHost.getProcPath() + "/proc/" + pid + "/cmdline"));
+                        String cmd = HexUtil.filter(FileUtil.getTextFileContent(containerProcInfoToHost.getProcPath() + "/proc/" + pid + "/cmdline")," ");
                         cmd = cmd.replaceAll("(\\s+--.*)*","").trim();
                         //java -jar应用
                         if (cmd.matches(".*java.*-jar.*\\.jar.*")){
-                            cmd = cmd.replaceAll("(/*\\w*)*java","")
-                                    .replaceAll("-jar","")
-                                    .replaceAll("-\\w*\\d*([_.*><!^;:,`~&]\\w*\\d*)*(=\\w*\\d*([_.*><!^;:,`~&]\\w*\\d*)*)*","");
-                            if (jmxServerName == null || !jmxServerName.contains(cmd)){
-                                sb.append(",").append(cmd);
+                            cmd = cmd.replaceAll("-jar","");
+                            for (String s : cmd.split("\\s+")) {
+                                if (StringUtils.isNotEmpty(s) &&
+                                        !s.endsWith("java") &&
+                                        !s.startsWith("-D") &&
+                                        !s.startsWith("--") &&
+                                        s.trim().matches(".*\\.jar")){
+                                    if (jmxServerName == null || !jmxServerName.contains(s)){
+                                        sb.append(",").append(s);
+                                    }
+                                }
                             }
                         }
                     }
