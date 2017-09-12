@@ -33,7 +33,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static com.falcon.suitagent.util.CacheByTimeUtil.getCache;
 import static com.falcon.suitagent.util.CacheByTimeUtil.setCache;
@@ -44,8 +46,8 @@ import static com.falcon.suitagent.util.CacheByTimeUtil.setCache;
 @Slf4j
 public class DockerUtil {
 
-    private static final ConcurrentHashMap<String,ConcurrentHashMap<Long,Object>> CATCH = new ConcurrentHashMap<>();
-
+    private static final Byte[] LockForGetAllHostContainerId = new Byte[0];
+    private static final Byte[] LockForGetAllHostContainerProcInfos = new Byte[0];
 
     private static final String PROC_HOST_VOLUME = "/proc_host";
     private static DockerClient docker = null;
@@ -73,17 +75,45 @@ public class DockerUtil {
      */
     public static ContainerInfo getContainerInfo(String containerId){
         String cacheKey = "containerInfoCacheKey" + containerId;
-        ContainerInfo containerInfo = (ContainerInfo) getCache(cacheKey);
-        if (containerInfo != null){
-            return containerInfo;
+        final ContainerInfo[] containerInfo = {(ContainerInfo) getCache(cacheKey)};
+        if (containerInfo[0] != null){
+            return containerInfo[0];
         }else {
-            try {
-                containerInfo = docker.inspectContainer(containerId);
-                setCache(cacheKey,containerInfo);
-                return containerInfo;
-            } catch (Exception e) {
-                log.error("",e);
-                return null;
+            synchronized (containerId.intern()) {
+                try {
+                    int timeOut = 45;
+                    final BlockingQueue<Object> blockingQueue = new ArrayBlockingQueue<>(1);
+                    //阻塞队列异步执行
+                    ExecuteThreadUtil.execute(() -> {
+                        try {
+                            containerInfo[0] = docker.inspectContainer(containerId);
+                            setCache(cacheKey, containerInfo[0]);
+                            blockingQueue.offer(containerInfo[0]);
+                        } catch (Throwable t) {
+                            blockingQueue.offer(t);
+                        }
+                    });
+
+                    //超时45秒
+                    Object result = BlockingQueueUtil.getResult(blockingQueue, timeOut, TimeUnit.SECONDS);
+                    blockingQueue.clear();
+
+                    if (result instanceof ContainerInfo) {
+                        return (ContainerInfo) result;
+                    }else if (result == null) {
+                        log.error("docker 容器Info获取{}秒超时：{}",timeOut,containerId);
+                        return null;
+                    }else if (result instanceof Throwable) {
+                        log.error("docker 容器Info获取异常",result);
+                        return null;
+                    }else {
+                        log.error("未知结果类型:{}",result);
+                        return null;
+                    }
+                } catch (Exception e) {
+                    log.error("",e);
+                    return null;
+                }
             }
         }
     }
@@ -102,15 +132,19 @@ public class DockerUtil {
             procInfoToHosts = new ArrayList<>();
         }
         if (docker != null){
-            try {
-                List<Container> containers = docker.listContainers(DockerClient.ListContainersParam.withStatusRunning());
-                for (Container container : containers) {
-                    ContainerInfo info = docker.inspectContainer(container.id());
-                    String pid = String.valueOf(info.state().pid());
-                    procInfoToHosts.add(new ContainerProcInfoToHost(container.id(),PROC_HOST_VOLUME + "/" + pid + "/root",pid));
+            synchronized (LockForGetAllHostContainerProcInfos){
+                try {
+                    List<Container> containers = docker.listContainers(DockerClient.ListContainersParam.withStatusRunning());
+                    for (Container container : containers) {
+                        ContainerInfo info = getContainerInfo(container.id());
+                        if (info != null) {
+                            String pid = String.valueOf(info.state().pid());
+                            procInfoToHosts.add(new ContainerProcInfoToHost(container.id(),PROC_HOST_VOLUME + "/" + pid + "/root",pid));
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("",e);
                 }
-            } catch (Exception e) {
-                log.error("",e);
             }
         }
         if (!procInfoToHosts.isEmpty()) {
@@ -276,13 +310,15 @@ public class DockerUtil {
         }else {
             ids = new ArrayList<>();
         }
-        try {
-            List<Container> containerList = docker.listContainers(DockerClient.ListContainersParam.allContainers());
-            for (Container container : containerList) {
-                ids.add(container.id());
+        synchronized (LockForGetAllHostContainerId){
+            try {
+                List<Container> containerList = docker.listContainers(DockerClient.ListContainersParam.allContainers());
+                for (Container container : containerList) {
+                    ids.add(container.id());
+                }
+            } catch (Exception e) {
+                log.error("",e);
             }
-        } catch (Exception e) {
-            log.error("",e);
         }
         setCache(cacheKey,ids,cacheTime);
         return ids;
