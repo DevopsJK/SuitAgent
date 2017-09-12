@@ -173,7 +173,7 @@ public class DockerPlugin implements DetectPlugin {
     public DetectResult detectResult(String address) {
         DetectResult detectResult = new DetectResult();
         try {
-            DockerMetrics dockerMetrics = new DockerMetrics("0.0.0.0",Integer.parseInt(address));
+            DockerMetrics dockerMetrics = new DockerMetrics("127.0.0.1",Integer.parseInt(address));
             List<DockerMetrics.CollectObject> collectObjectList = dockerMetrics.getMetrics();
 
             List<DetectResult.Metric> metrics = new ArrayList<>();
