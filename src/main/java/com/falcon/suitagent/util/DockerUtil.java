@@ -119,6 +119,55 @@ public class DockerUtil {
     }
 
     /**
+     * 获取容器列表
+     * @param containersParam
+     * @return
+     */
+    public static List<Container> getContainers(DockerClient.ListContainersParam containersParam) {
+        String cacheKey = "getContainer" + containersParam.value();
+        final List<Container> containers = (List<Container>) CacheByTimeUtil.getCache(cacheKey);
+        if (containers != null) {
+            return containers;
+        }
+
+        try {
+            int timeOut = 45;
+            final BlockingQueue<Object> blockingQueue = new ArrayBlockingQueue<>(1);
+            //阻塞队列异步执行
+            ExecuteThreadUtil.execute(() -> {
+                try {
+                    List<Container> containerList = docker.listContainers(containersParam);
+                    setCache(cacheKey, containerList);
+                    blockingQueue.offer(containerList);
+                } catch (Throwable t) {
+                    blockingQueue.offer(t);
+                }
+            });
+
+            //超时
+            Object result = BlockingQueueUtil.getResult(blockingQueue, timeOut, TimeUnit.SECONDS);
+            blockingQueue.clear();
+
+            if (result instanceof List) {
+                return (List<Container>) result;
+            }else if (result == null) {
+                log.error("docker 容器 List 获取{}秒超",timeOut);
+                return new ArrayList<>();
+            }else if (result instanceof Throwable) {
+                log.error("docker 容器 List 获取异常",result);
+                return new ArrayList<>();
+            }else {
+                log.error("未知结果类型:{}",result);
+                return new ArrayList<>();
+            }
+        } catch (Exception e) {
+            log.error("",e);
+            return new ArrayList<>();
+        }
+
+    }
+
+    /**
      * 获取主机上所有运行容器的proc信息
      * @return
      */
@@ -131,20 +180,18 @@ public class DockerUtil {
         }else {
             procInfoToHosts = new ArrayList<>();
         }
-        if (docker != null){
-            synchronized (LockForGetAllHostContainerProcInfos){
-                try {
-                    List<Container> containers = docker.listContainers(DockerClient.ListContainersParam.withStatusRunning());
-                    for (Container container : containers) {
-                        ContainerInfo info = getContainerInfo(container.id());
-                        if (info != null) {
-                            String pid = String.valueOf(info.state().pid());
-                            procInfoToHosts.add(new ContainerProcInfoToHost(container.id(),PROC_HOST_VOLUME + "/" + pid + "/root",pid));
-                        }
+        synchronized (LockForGetAllHostContainerProcInfos){
+            try {
+                List<Container> containers = getContainers(DockerClient.ListContainersParam.withStatusRunning());
+                for (Container container : containers) {
+                    ContainerInfo info = getContainerInfo(container.id());
+                    if (info != null) {
+                        String pid = String.valueOf(info.state().pid());
+                        procInfoToHosts.add(new ContainerProcInfoToHost(container.id(),PROC_HOST_VOLUME + "/" + pid + "/root",pid));
                     }
-                } catch (Exception e) {
-                    log.error("",e);
                 }
+            } catch (Exception e) {
+                log.error("",e);
             }
         }
         if (!procInfoToHosts.isEmpty()) {
@@ -312,7 +359,7 @@ public class DockerUtil {
         }
         synchronized (LockForGetAllHostContainerId){
             try {
-                List<Container> containerList = docker.listContainers(DockerClient.ListContainersParam.allContainers());
+                List<Container> containerList = getContainers(DockerClient.ListContainersParam.allContainers());
                 for (Container container : containerList) {
                     ids.add(container.id());
                 }
