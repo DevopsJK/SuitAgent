@@ -10,10 +10,14 @@ package com.falcon.suitagent.plugins.plugin.docker;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.util.DateUtil;
 import com.falcon.suitagent.util.MD5Util;
 import com.falcon.suitagent.util.Maths;
 import com.falcon.suitagent.util.StringUtils;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -248,10 +252,20 @@ public class DockerMetrics {
                 collectObjectList.add(new CollectObject(containerName,"net.if.in.errors",String.valueOf(rxErrors),tag));
                 collectObjectList.add(new CollectObject(containerName,"net.if.in.dropped",String.valueOf(rxDropped),tag));
 
+                collectObjectList.add(new CollectObject(containerName,"net.if.in.speed.bytes",String.valueOf(rxBytes),tag,CounterType.COUNTER));
+                collectObjectList.add(new CollectObject(containerName,"net.if.in.speed.packets",String.valueOf(rxPackets),tag,CounterType.COUNTER));
+                collectObjectList.add(new CollectObject(containerName,"net.if.in.speed.errors",String.valueOf(rxErrors),tag,CounterType.COUNTER));
+                collectObjectList.add(new CollectObject(containerName,"net.if.in.speed.dropped",String.valueOf(rxDropped),tag,CounterType.COUNTER));
+
                 collectObjectList.add(new CollectObject(containerName,"net.if.out.bytes",String.valueOf(txBytes),tag));
                 collectObjectList.add(new CollectObject(containerName,"net.if.out.packets",String.valueOf(txPackets),tag));
                 collectObjectList.add(new CollectObject(containerName,"net.if.out.errors",String.valueOf(txErrors),tag));
                 collectObjectList.add(new CollectObject(containerName,"net.if.out.dropped",String.valueOf(txDropped),tag));
+
+                collectObjectList.add(new CollectObject(containerName,"net.if.out.speed.bytes",String.valueOf(txBytes),tag,CounterType.COUNTER));
+                collectObjectList.add(new CollectObject(containerName,"net.if.out.speed.packets",String.valueOf(txPackets),tag,CounterType.COUNTER));
+                collectObjectList.add(new CollectObject(containerName,"net.if.out.speed.errors",String.valueOf(txErrors),tag,CounterType.COUNTER));
+                collectObjectList.add(new CollectObject(containerName,"net.if.out.speed.dropped",String.valueOf(txDropped),tag,CounterType.COUNTER));
             }
         }
 
@@ -365,11 +379,21 @@ public class DockerMetrics {
          */
         private String tags;
 
+        private CounterType counterType = CounterType.GAUGE;
+
         CollectObject(String containerName, String metric, String value,String tags) {
             this.containerName = containerName;
             this.metric = metric;
             this.value = value;
             this.tags = tags;
+        }
+
+        public CollectObject(String containerName, String metric, String value, String tags, CounterType counterType) {
+            this.containerName = containerName;
+            this.metric = metric;
+            this.value = value;
+            this.tags = tags;
+            this.counterType = counterType;
         }
 
         @Override
@@ -412,6 +436,14 @@ public class DockerMetrics {
 
         public void setContainerName(String containerName) {
             this.containerName = containerName;
+        }
+
+        public CounterType getCounterType() {
+            return counterType;
+        }
+
+        public void setCounterType(CounterType counterType) {
+            this.counterType = counterType;
         }
     }
 }
