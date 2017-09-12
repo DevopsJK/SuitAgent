@@ -12,6 +12,7 @@ import com.falcon.suitagent.config.AgentConfiguration;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.plugins.DetectPlugin;
 import com.falcon.suitagent.util.CommandUtilForUnix;
+import com.falcon.suitagent.util.HostUtil;
 import com.falcon.suitagent.util.OSUtil;
 import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.vo.detect.DetectResult;
@@ -173,7 +174,7 @@ public class DockerPlugin implements DetectPlugin {
     public DetectResult detectResult(String address) {
         DetectResult detectResult = new DetectResult();
         try {
-            DockerMetrics dockerMetrics = new DockerMetrics("127.0.0.1",Integer.parseInt(address));
+            DockerMetrics dockerMetrics = new DockerMetrics(HostUtil.getHostIp(),Integer.parseInt(address));
             List<DockerMetrics.CollectObject> collectObjectList = dockerMetrics.getMetrics();
 
             List<DetectResult.Metric> metrics = new ArrayList<>();
