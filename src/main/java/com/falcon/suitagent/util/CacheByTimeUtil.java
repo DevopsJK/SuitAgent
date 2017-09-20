@@ -21,15 +21,21 @@ package com.falcon.suitagent.util;
  * long.qian@msxf.com 2017-09-11 14:29 创建
  */
 
+import com.falcon.suitagent.vo.sceduler.ScheduleJobResult;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
+import org.quartz.JobDataMap;
+import org.quartz.JobDetail;
+import org.quartz.Trigger;
 
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static com.falcon.suitagent.common.AgentJobHelper.*;
 
 /**
  * @author long.qian@msxf.com
@@ -65,32 +71,31 @@ public class CacheByTimeUtil {
             }
         }
 
-        //缓存周期检查任务
-        Thread cacheCheck = new Thread(new CacheCheck());
-        cacheCheck.setName("DockerUtil Cache Check Thread");
-        cacheCheck.setDaemon(true);
-        cacheCheck.start();
+        try {
+            JobDetail job = getJobDetail(CacheByTimeUtilCheckJob.class,"CacheByTimeUtilCheckJob", "缓存检查任务",new JobDataMap());
+            Trigger trigger = getTrigger(/*CACHE_TIME * 3 + 15*/5,"CacheByTimeUtilCheckTrigger","缓存检查任务");
+            ScheduleJobResult scheduleJobResult = SchedulerUtil.executeScheduleJob(job,trigger);
+            scheduleResults.add(scheduleJobResult);
+            workResult(scheduleJobResult,"CacheByTimeUtilCheckJob");
+        } catch (Exception e) {
+            log.error("",e);
+        }
+
     }
 
     /**
      * 缓存检查，自动清除无效的缓存，设置为守护线程，随JVM消亡而自动消亡
      */
-    private static class CacheCheck implements Runnable{
-        @Override
-        public void run() {
-            while (true){
-                try {
-                    Thread.sleep(CACHE_TIME * 1000 * 3 + 5000);//检查周期
-                    Set<String> keys = CATCH.keySet();
-                    for (String key : keys) {
-                        if (getCache(key) == null){
-                            CATCH.remove(key);
-                        }
-                    }
-                } catch (Exception e) {
-                    log.error("",e);
+    static void checkCache(){
+        try {
+            Set<String> keys = CATCH.keySet();
+            for (String key : keys) {
+                if (getCache(key) == null){
+                    CATCH.remove(key);
                 }
             }
+        } catch (Exception e) {
+            log.error("",e);
         }
     }
 
