@@ -224,10 +224,15 @@ public class MongoDBPlugin implements DetectPlugin {
                         }
                         String str = s.substring(0,end);
                         if (turnNetConf){
-                            if (str.contains("port:")){
+                            if (str.contains("port:") || str.contains("port=")){
                                 String port = str.replace("port:","").trim();
                                 if (NumberUtils.isNumber(port)){
                                     return port;
+                                }else {
+                                    port = str.replace("port=","").trim();
+                                    if (NumberUtils.isNumber(port)){
+                                        return port;
+                                    }
                                 }
                             }
                         }else {
