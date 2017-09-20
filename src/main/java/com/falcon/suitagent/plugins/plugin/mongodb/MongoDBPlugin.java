@@ -12,10 +12,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.plugins.DetectPlugin;
-import com.falcon.suitagent.util.CommandUtilForUnix;
-import com.falcon.suitagent.util.FileUtil;
-import com.falcon.suitagent.util.JSONUtil;
-import com.falcon.suitagent.util.StringUtils;
+import com.falcon.suitagent.util.*;
 import com.falcon.suitagent.vo.detect.DetectResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
@@ -116,6 +113,10 @@ public class MongoDBPlugin implements DetectPlugin {
             String port = ss[1];
             String cmd = String.format("echo 'db.serverStatus()' | %s --port %s",binPath,port);
             CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
+            //若不能访问，添加ip进行访问
+            if (!executeResult.msg.contains("bye")){
+                executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd + " --host " + HostUtil.getHostIp(),false,7);
+            }
             if(!StringUtils.isEmpty(executeResult.msg)){
                 String msg = executeResult.msg;
                 log.debug(msg);
