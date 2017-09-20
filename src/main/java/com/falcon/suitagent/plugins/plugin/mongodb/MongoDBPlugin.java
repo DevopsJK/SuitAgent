@@ -215,8 +215,21 @@ public class MongoDBPlugin implements DetectPlugin {
     private String getPortFromConfFile(String confPath){
         if (confPath != null){
             try {
+                String content = FileUtil.getTextFileContent(confPath);
+                String[] cs = content.split("\n");
+                String port;
+                //properties形式的判断
+                for (String s : cs) {
+                    if (s.trim().matches("port\\s*=\\s*\\d+")){
+                        port = s.trim().replaceAll("port\\s*=\\s*","").trim();
+                        if (NumberUtils.isNumber(port)){
+                            return port;
+                        }
+                    }
+                }
+                //yaml形式的判断
                 boolean turnNetConf = false;
-                for (String s : FileUtil.getTextFileContent(confPath).split("\n")) {
+                for (String s : cs) {
                     if (!s.trim().startsWith("#")){
                         int end = s.length();
                         if (s.contains("#")){
@@ -224,15 +237,10 @@ public class MongoDBPlugin implements DetectPlugin {
                         }
                         String str = s.substring(0,end);
                         if (turnNetConf){
-                            if (str.contains("port:") || str.contains("port=")){
-                                String port = str.replace("port:","").trim();
+                            if (str.contains("port:")){
+                                port = str.replace("port:","").trim();
                                 if (NumberUtils.isNumber(port)){
                                     return port;
-                                }else {
-                                    port = str.replace("port=","").trim();
-                                    if (NumberUtils.isNumber(port)){
-                                        return port;
-                                    }
                                 }
                             }
                         }else {
