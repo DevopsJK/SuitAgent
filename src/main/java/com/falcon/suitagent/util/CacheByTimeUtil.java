@@ -73,7 +73,7 @@ public class CacheByTimeUtil {
 
         try {
             JobDetail job = getJobDetail(CacheByTimeUtilCheckJob.class,"CacheByTimeUtilCheckJob", "缓存检查任务",new JobDataMap());
-            Trigger trigger = getTrigger(/*CACHE_TIME * 3 + 15*/5,"CacheByTimeUtilCheckTrigger","缓存检查任务");
+            Trigger trigger = getTrigger(CACHE_TIME * 3 + 15,"CacheByTimeUtilCheckTrigger","缓存检查任务");
             ScheduleJobResult scheduleJobResult = SchedulerUtil.executeScheduleJob(job,trigger);
             scheduleResults.add(scheduleJobResult);
             workResult(scheduleJobResult,"CacheByTimeUtilCheckJob");
