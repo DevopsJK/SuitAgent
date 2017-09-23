@@ -424,84 +424,99 @@ public class JMXMetricsValue extends MetricsCommon {
 
                 if ("java.lang:type=Memory".equals(objectNameInfo.getObjectName().toString())) {
                     hasHeapCollect = true;
-                    MemoryUsage heapMemoryUsage = MemoryUsage.from((CompositeDataSupport) objectNameInfo.getMetricsValue().get("HeapMemoryUsage"));
-                    MemoryUsage nonHeapMemoryUsage = MemoryUsage.from((CompositeDataSupport) objectNameInfo.getMetricsValue().get("NonHeapMemoryUsage"));
+                    MemoryUsage heapMemoryUsage = null;
+                    try {
+                        heapMemoryUsage = MemoryUsage.from((CompositeDataSupport) objectNameInfo.getMetricsValue().get("HeapMemoryUsage"));
+                    } catch (Exception ignored) {}
+                    MemoryUsage nonHeapMemoryUsage = null;
+                    try {
+                        nonHeapMemoryUsage = MemoryUsage.from((CompositeDataSupport) objectNameInfo.getMetricsValue().get("NonHeapMemoryUsage"));
+                    } catch (Exception ignored) {}
 
-                    falconReportObject.setMetric(getMetricsName("HeapMemoryCommitted"));
-                    falconReportObject.setValue(String.valueOf(heapMemoryUsage.getCommitted()));
-                    result.add(falconReportObject.clone());
-
-                    falconReportObject.setMetric(getMetricsName("NonHeapMemoryCommitted"));
-                    falconReportObject.setValue(String.valueOf(nonHeapMemoryUsage.getCommitted()));
-                    result.add(falconReportObject.clone());
-
-                    falconReportObject.setMetric(getMetricsName("HeapMemoryFree"));
-                    falconReportObject.setValue(String.valueOf(heapMemoryUsage.getMax() - heapMemoryUsage.getUsed()));
-                    result.add(falconReportObject.clone());
-
-                    falconReportObject.setMetric(getMetricsName("HeapMemoryMax"));
-                    falconReportObject.setValue(String.valueOf(heapMemoryUsage.getMax()));
-                    result.add(falconReportObject.clone());
-
-                    falconReportObject.setMetric(getMetricsName("HeapMemoryUsed"));
-                    falconReportObject.setValue(String.valueOf(heapMemoryUsage.getUsed()));
-                    result.add(falconReportObject.clone());
-
-                    falconReportObject.setMetric(getMetricsName("NonHeapMemoryUsed"));
-                    falconReportObject.setValue(String.valueOf(nonHeapMemoryUsage.getUsed()));
-                    result.add(falconReportObject.clone());
-
-                    //堆内存使用比例
-                    falconReportObject.setMetric(getMetricsName("HeapMemoryUsedRatio"));
-                    falconReportObject.setValue(String.valueOf(Maths.div(heapMemoryUsage.getUsed(), heapMemoryUsage.getMax(), 2) * 100));
-                    result.add(falconReportObject.clone());
-
-                    if (nonHeapMemoryUsage.getMax() == -1) {
-                        falconReportObject.setMetric(getMetricsName("NonHeapMemoryUsedRatio"));
-                        falconReportObject.setValue("-1");
-                        result.add(falconReportObject.clone());
-                    } else {
-                        falconReportObject.setMetric(getMetricsName("NonHeapMemoryUsedRatio"));
-                        falconReportObject.setValue(String.valueOf(Maths.div(nonHeapMemoryUsage.getUsed(), nonHeapMemoryUsage.getMax(), 2) * 100));
+                    if (heapMemoryUsage != null){
+                        falconReportObject.setMetric(getMetricsName("HeapMemoryCommitted"));
+                        falconReportObject.setValue(String.valueOf(heapMemoryUsage.getCommitted()));
                         result.add(falconReportObject.clone());
 
-                        falconReportObject.setMetric(getMetricsName("NonHeapMemoryMax"));
-                        falconReportObject.setValue(String.valueOf(nonHeapMemoryUsage.getMax()));
+                        falconReportObject.setMetric(getMetricsName("HeapMemoryFree"));
+                        falconReportObject.setValue(String.valueOf(heapMemoryUsage.getMax() - heapMemoryUsage.getUsed()));
                         result.add(falconReportObject.clone());
 
-                        falconReportObject.setMetric(getMetricsName("NonHeapMemoryFree"));
-                        falconReportObject.setValue(String.valueOf(nonHeapMemoryUsage.getMax() - nonHeapMemoryUsage.getUsed()));
+                        falconReportObject.setMetric(getMetricsName("HeapMemoryMax"));
+                        falconReportObject.setValue(String.valueOf(heapMemoryUsage.getMax()));
                         result.add(falconReportObject.clone());
+
+                        falconReportObject.setMetric(getMetricsName("HeapMemoryUsed"));
+                        falconReportObject.setValue(String.valueOf(heapMemoryUsage.getUsed()));
+                        result.add(falconReportObject.clone());
+
+                        //堆内存使用比例
+                        falconReportObject.setMetric(getMetricsName("HeapMemoryUsedRatio"));
+                        falconReportObject.setValue(String.valueOf(Maths.div(heapMemoryUsage.getUsed(), heapMemoryUsage.getMax(), 2) * 100));
+                        result.add(falconReportObject.clone());
+                    }
+
+                    if (nonHeapMemoryUsage != null){
+                        falconReportObject.setMetric(getMetricsName("NonHeapMemoryCommitted"));
+                        falconReportObject.setValue(String.valueOf(nonHeapMemoryUsage.getCommitted()));
+                        result.add(falconReportObject.clone());
+
+                        falconReportObject.setMetric(getMetricsName("NonHeapMemoryUsed"));
+                        falconReportObject.setValue(String.valueOf(nonHeapMemoryUsage.getUsed()));
+                        result.add(falconReportObject.clone());
+
+                        if (nonHeapMemoryUsage.getMax() == -1) {
+                            falconReportObject.setMetric(getMetricsName("NonHeapMemoryUsedRatio"));
+                            falconReportObject.setValue("-1");
+                            result.add(falconReportObject.clone());
+                        } else {
+                            falconReportObject.setMetric(getMetricsName("NonHeapMemoryUsedRatio"));
+                            falconReportObject.setValue(String.valueOf(Maths.div(nonHeapMemoryUsage.getUsed(), nonHeapMemoryUsage.getMax(), 2) * 100));
+                            result.add(falconReportObject.clone());
+
+                            falconReportObject.setMetric(getMetricsName("NonHeapMemoryMax"));
+                            falconReportObject.setValue(String.valueOf(nonHeapMemoryUsage.getMax()));
+                            result.add(falconReportObject.clone());
+
+                            falconReportObject.setMetric(getMetricsName("NonHeapMemoryFree"));
+                            falconReportObject.setValue(String.valueOf(nonHeapMemoryUsage.getMax() - nonHeapMemoryUsage.getUsed()));
+                            result.add(falconReportObject.clone());
+                        }
                     }
 
                 } else if ("java.lang:type=MemoryPool,name=Metaspace".equals(objectNameInfo.getObjectName().toString())) {
                     hasMetaCollect = true;
-                    MemoryUsage metaspaceUsage = MemoryUsage.from((CompositeDataSupport) objectNameInfo.getMetricsValue().get("Usage"));
+                    MemoryUsage metaspaceUsage = null;
+                    try {
+                        metaspaceUsage = MemoryUsage.from((CompositeDataSupport) objectNameInfo.getMetricsValue().get("Usage"));
+                    } catch (Exception ignored) {}
 
-                    falconReportObject.setMetric(getMetricsName("MetaspaceMemoryCommitted"));
-                    falconReportObject.setValue(String.valueOf(metaspaceUsage.getCommitted()));
-                    result.add(falconReportObject.clone());
-
-                    falconReportObject.setMetric(getMetricsName("MetaspaceMemoryUsed"));
-                    falconReportObject.setValue(String.valueOf(metaspaceUsage.getUsed()));
-                    result.add(falconReportObject.clone());
-
-                    if (metaspaceUsage.getMax() == -1) {
-                        falconReportObject.setMetric(getMetricsName("MetaspaceMemoryUsedRatio"));
-                        falconReportObject.setValue("-1");
-                        result.add(falconReportObject.clone());
-                    } else {
-                        falconReportObject.setMetric(getMetricsName("MetaspaceMemoryUsedRatio"));
-                        falconReportObject.setValue(String.valueOf(Maths.div(metaspaceUsage.getUsed(), metaspaceUsage.getMax(), 2) * 100));
+                    if (metaspaceUsage != null) {
+                        falconReportObject.setMetric(getMetricsName("MetaspaceMemoryCommitted"));
+                        falconReportObject.setValue(String.valueOf(metaspaceUsage.getCommitted()));
                         result.add(falconReportObject.clone());
 
-                        falconReportObject.setMetric(getMetricsName("MetaspaceMemoryMax"));
-                        falconReportObject.setValue(String.valueOf(metaspaceUsage.getMax()));
+                        falconReportObject.setMetric(getMetricsName("MetaspaceMemoryUsed"));
+                        falconReportObject.setValue(String.valueOf(metaspaceUsage.getUsed()));
                         result.add(falconReportObject.clone());
 
-                        falconReportObject.setMetric(getMetricsName("MetaspaceMemoryFree"));
-                        falconReportObject.setValue(String.valueOf(metaspaceUsage.getMax() - metaspaceUsage.getUsed()));
-                        result.add(falconReportObject.clone());
+                        if (metaspaceUsage.getMax() == -1) {
+                            falconReportObject.setMetric(getMetricsName("MetaspaceMemoryUsedRatio"));
+                            falconReportObject.setValue("-1");
+                            result.add(falconReportObject.clone());
+                        } else {
+                            falconReportObject.setMetric(getMetricsName("MetaspaceMemoryUsedRatio"));
+                            falconReportObject.setValue(String.valueOf(Maths.div(metaspaceUsage.getUsed(), metaspaceUsage.getMax(), 2) * 100));
+                            result.add(falconReportObject.clone());
+
+                            falconReportObject.setMetric(getMetricsName("MetaspaceMemoryMax"));
+                            falconReportObject.setValue(String.valueOf(metaspaceUsage.getMax()));
+                            result.add(falconReportObject.clone());
+
+                            falconReportObject.setMetric(getMetricsName("MetaspaceMemoryFree"));
+                            falconReportObject.setValue(String.valueOf(metaspaceUsage.getMax() - metaspaceUsage.getUsed()));
+                            result.add(falconReportObject.clone());
+                        }
                     }
                 }
             }
@@ -514,7 +529,7 @@ public class JMXMetricsValue extends MetricsCommon {
             }
 
         } catch (Exception e) {
-            log.error("获取 {} jmx 内置监控数据异常:{}", metricsValueInfo.getJmxConnectionInfo().getName(), e.getMessage());
+            log.error("获取 {} jmx 内置监控数据异常:{}", metricsValueInfo.getJmxConnectionInfo().getName(), e);
         }
         return result;
     }
