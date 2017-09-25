@@ -106,11 +106,51 @@ public class Agent extends Thread{
             }
             String falconAgentConfContent = FileUtil.getTextFileContent(falconAgentConfFile);
             //将"hostname": "", 配置替换为与SuitAgent相同的Endpoint配置
-            falconAgentConfContent = falconAgentConfContent.replaceAll("\"hostname\"\\s*:\\s*\"\"\\s*,",String.format("\"hostname\": \"%s\",",getEndpointByTrans(AgentConfiguration.INSTANCE.getAgentEndpoint())));
+            String endpoint = getEndpointByTrans(AgentConfiguration.INSTANCE.getAgentEndpoint());
+            falconAgentConfContent = falconAgentConfContent.replaceAll("\"hostname\"\\s*:\\s*\"\"\\s*,",String.format("\"hostname\": \"%s\",",endpoint));
             if(StringUtils.isEmpty(falconAgentConfContent)){
                 log.error("Agent 启动失败 - Falcon Agent配置文件:{} 无配置内容",falconAgentConfFile);
                 System.exit(0);
             }
+
+            if ("127.0.0.1".equals(endpoint)) {
+                String finalFalconAgentConfContent = falconAgentConfContent;
+                ExecuteThreadUtil.execute(() -> {
+                    try {
+                        log.info("因获取本地IP失败，FalconAgent HostName检查修复任务启动");
+                        while (true) {
+                            //1分钟检查一次获取本地IP是否正常
+                            Thread.sleep(60 * 1000);
+                            String ip = HostUtil.getHostIp();
+                            if (!"127.0.0.1".equals(ip)){
+                                log.info("已检测到IP：{}，更新FalconAgent配置，重启FalconAgent",ip);
+                                String falconAgentConf = finalFalconAgentConfContent.replaceAll("\"hostname\"\\s*:\\s*\".*\"\\s*,",String.format("\"hostname\": \"%s\",",ip));
+                                String falconAgentDir = AgentConfiguration.INSTANCE.getFalconDir() + File.separator + "agent";
+                                if(FileUtil.writeTextToTextFile(falconAgentConf,falconAgentDir,"cfg.json",false)){
+                                    String falconTarget = falconAgentDir + File.separator + "control";
+                                    CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(falconTarget,"restart",true,7);
+                                    log.info("正在重新启动 Falcon Agent : {}",executeResult.msg);
+                                    String msg = executeResult.msg.trim();
+                                    if(msg.contains("falcon-agent started")){
+                                        falconAgentPid = Integer.parseInt(msg.substring(
+                                                msg.indexOf("pid=") + 4
+                                        ));
+                                        log.info("Falcon Agent 重新启动成功,进程ID为 : {}",falconAgentPid);
+                                    }else{
+                                        log.error("Agent重新启动失败 - Falcon Agent 重新启动失败");
+                                        System.exit(0);
+                                    }
+                                }
+
+                                break;
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("",e);
+                    }
+                });
+            }
+
             String falconAgentDir = AgentConfiguration.INSTANCE.getFalconDir() + File.separator + "agent";
             if(FileUtil.writeTextToTextFile(falconAgentConfContent,falconAgentDir,"cfg.json",false)){
                 String falconTarget = falconAgentDir + File.separator + "control";
