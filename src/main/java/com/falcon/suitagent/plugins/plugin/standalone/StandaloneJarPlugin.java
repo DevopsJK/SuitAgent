@@ -37,10 +37,15 @@ import java.util.regex.Pattern;
 @Slf4j
 public class StandaloneJarPlugin implements JMXPlugin {
 
+    private String basePropertiesKey;
     private String jmxServerDir;
     private String jmxServerName;
     private int step;
     private PluginActivateType pluginActivateType;
+
+    private static Pattern JAVA_CMD_CP_JAR_PATTERN = Pattern.compile("-cp\\s+(/(\\w*\\d*)*(\\w*\\d*([-_.*><!^;:,`~&])\\w*\\d*)*)*\\.jar");
+
+    private static Pattern JAVA_JAR_PATTERN = Pattern.compile(".*\\.jar");
 
     /**
      * 自定义的监控属性的监控值基础配置名
@@ -49,7 +54,7 @@ public class StandaloneJarPlugin implements JMXPlugin {
      */
     @Override
     public String basePropertiesKey() {
-        return null;
+        return basePropertiesKey;
     }
 
     /**
@@ -69,8 +74,7 @@ public class StandaloneJarPlugin implements JMXPlugin {
                 CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
                 String msg = executeResult.msg;
                 for (String s : msg.split("\n")) {
-                    Pattern pattern = Pattern.compile("-cp\\s+(/(\\w*\\d*)*(\\w*\\d*([-_.*><!^;:,`~&])\\w*\\d*)*)*\\.jar");
-                    Matcher matcher = pattern.matcher(s);
+                    Matcher matcher = JAVA_CMD_CP_JAR_PATTERN.matcher(s);
                     if (matcher.find()){
                         String find = matcher.group();
                         //将第一个-cp去掉
@@ -96,8 +100,7 @@ public class StandaloneJarPlugin implements JMXPlugin {
                 String displayName = desc.displayName().replaceAll("(\\s+--.*)*","");
                 //java -jar 形式启动的Java应用
                 if(displayName.matches(".*\\.jar")){
-                    Pattern pattern = Pattern.compile(".*\\.jar");
-                    Matcher matcher = pattern.matcher(displayName);
+                    Matcher matcher = JAVA_JAR_PATTERN.matcher(displayName);
                     if (matcher.find()){
                         displayName = matcher.group();
                     }
@@ -234,6 +237,7 @@ public class StandaloneJarPlugin implements JMXPlugin {
         }
         step = Integer.parseInt(properties.get("step"));
         pluginActivateType = PluginActivateType.valueOf(properties.get("pluginActivateType"));
+        basePropertiesKey = properties.get("basePropertiesKey");
     }
 
     /**

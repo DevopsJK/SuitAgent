@@ -5,9 +5,7 @@
 package com.falcon.suitagent.jmx.vo;
 
 import com.falcon.suitagent.vo.jmx.JMXMetricsConfiguration;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.Data;
 
 import java.util.List;
 import java.util.Set;
@@ -21,9 +19,7 @@ import java.util.Set;
  * JMX mBean值的info类
  * @author guqiu@yiji.com
  */
-@Getter
-@Setter
-@ToString
+@Data
 public class JMXMetricsValueInfo {
 
     private long timestamp;

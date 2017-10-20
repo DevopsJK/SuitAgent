@@ -4,9 +4,7 @@
  */
 package com.falcon.suitagent.vo.jmx;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.Data;
 
 /*
  * 修订记录:
@@ -17,9 +15,7 @@ import lombok.ToString;
  * JMX监控方式 Agent配置文件配置的需要进行获取的监控参数
  * @author guqiu@yiji.com
  */
-@Getter
-@Setter
-@ToString
+@Data
 public class JMXMetricsConfiguration {
 
     private String objectName;
