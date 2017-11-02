@@ -47,7 +47,7 @@ public class RedisPlugin implements DetectPlugin {
     /**
      * 缓存客户端地址
      */
-    private static final String[] CACHE_CLIENT = new String[0];
+    private static final String[] CACHE_CLIENT = new String[1];
 
     private int step;
     /**
@@ -246,7 +246,7 @@ public class RedisPlugin implements DetectPlugin {
                 log.error("Redis采集命令{}执行失败：{}",cmd4Info,infoResult);
             }
         } catch (Exception e) {
-            log.error("Redis监控数据采集异常");
+            log.error("Redis监控数据采集异常",e);
         }
         return detectResult;
     }
