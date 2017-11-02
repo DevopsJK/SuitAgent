@@ -23,10 +23,13 @@ import java.util.Properties;
 @Getter
 public enum  AgentConfiguration {
 
+    /**
+     * 唯一实例
+     */
     INSTANCE;
 
     //版本不能大于 x.9
-    public static final float VERSION = (float)  18.1;
+    public static final float VERSION = (float)  18.2;
 
     /**
      * quartz配置文件路径

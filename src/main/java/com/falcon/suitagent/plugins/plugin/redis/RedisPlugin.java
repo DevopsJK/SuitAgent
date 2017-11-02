@@ -31,12 +31,23 @@ import org.apache.commons.lang.math.NumberUtils;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * @author long.qian@msxf.com
  */
 @Slf4j
 public class RedisPlugin implements DetectPlugin {
+
+    /**
+     * 缓存被探测到的地址，防止Redis进程关闭是无法上报不可用的状态
+     */
+    private static final ConcurrentSkipListSet<String> CACHE_ADDRESS = new ConcurrentSkipListSet<>();
+
+    /**
+     * 缓存客户端地址
+     */
+    private static final String[] CACHE_CLIENT = new String[0];
 
     private int step;
     /**
@@ -161,16 +172,25 @@ public class RedisPlugin implements DetectPlugin {
     public DetectResult detectResult(String address) {
         DetectResult detectResult = new DetectResult();
         try {
-            String redisCli = "";
-            CommandUtilForUnix.ExecuteResult cli = CommandUtilForUnix.execWithReadTimeLimit("whereis redis-cli",false,7);
-            redisCli = cli.msg.replace("redis-cli:","").trim();
-            if (StringUtils.isEmpty(redisCli) || !FileUtil.isExist(redisCli)){
-                String cliPath = address.split(" ")[0].replace("redis-server","redis-cli");
-                if(FileUtil.isExist(cliPath)){
-                    redisCli = cliPath;
-                }else {
-                    log.warn("未找到redis-cli的执行路径（系统PATH中未找到 redis-cli 命令，且 redis-server 没有用绝对路径方式启动：{}。请将redis-cli加入系统PATH或以️绝对路径方式启动redis-server），使用默认的redis-cli命令",address.split(" ")[0]);
-                    redisCli = "redis-cli";
+            String redisCli;
+            if (FileUtil.isExist(CACHE_CLIENT[0])) {
+                //使用缓存的客户端位置
+                redisCli = CACHE_CLIENT[0];
+            }else {
+                //探测客户端位置
+                CommandUtilForUnix.ExecuteResult cli = CommandUtilForUnix.execWithReadTimeLimit("whereis redis-cli",false,7);
+                redisCli = cli.msg.replace("redis-cli:","").trim();
+                if (StringUtils.isEmpty(redisCli) || !FileUtil.isExist(redisCli)){
+                    String cliPath = address.split(" ")[0].replace("redis-server","redis-cli");
+                    if(FileUtil.isExist(cliPath)){
+                        redisCli = cliPath;
+                        CACHE_CLIENT[0] = redisCli;
+                    }else {
+                        log.warn("未找到redis-cli的执行路径（系统PATH中未找到 redis-cli 命令，且 redis-server 没有用绝对路径方式启动：{}。请将redis-cli加入系统PATH或以️绝对路径方式启动redis-server），使用默认的redis-cli命令",address.split(" ")[0]);
+                        redisCli = "redis-cli";
+                    }
+                }else if (FileUtil.isExist(redisCli)) {
+                    CACHE_CLIENT[0] = redisCli;
                 }
             }
 
@@ -340,14 +360,14 @@ public class RedisPlugin implements DetectPlugin {
             String tag = "db=" + key;
             String redisKeys = "";
             String expires = "";
-            String avg_ttl = "";
+            String avgTtl = "";
             String[] split = map.get(key).split(",");
             redisKeys = split[0].split("=")[1];
             expires = split[1].split("=")[1];
-            avg_ttl = split[2].split("=")[1];
+            avgTtl = split[2].split("=")[1];
             metricList.add(new DetectResult.Metric("keyspace_keys",redisKeys,CounterType.GAUGE,tag));
             metricList.add(new DetectResult.Metric("keyspace_expires",expires,CounterType.GAUGE,tag));
-            metricList.add(new DetectResult.Metric("keyspace_avg_ttl",avg_ttl,CounterType.GAUGE,tag));
+            metricList.add(new DetectResult.Metric("keyspace_avg_ttl",avgTtl,CounterType.GAUGE,tag));
         });
 
         metricList.addAll(getRelativeMetrics(metricList,address));
@@ -446,7 +466,6 @@ public class RedisPlugin implements DetectPlugin {
      */
     @Override
     public Collection<String> autoDetectAddress() {
-        List<String> redisAddresses = new ArrayList<>();
         String cmd = "ps aux | grep redis-server| grep -v grep|awk '{print $11 \" \" $12}'";
         try {
             CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
@@ -456,7 +475,7 @@ public class RedisPlugin implements DetectPlugin {
                         log.warn("探测到的Redis地址格式非{Cmd IP:Port}形式，将跳过此采集：{}",result.trim());
                         continue;
                     }
-                    redisAddresses.add(result.trim());
+                    CACHE_ADDRESS.add(result.trim());
                 }
             }else {
                 log.error("命令执行失败：{}",executeResult);
@@ -464,6 +483,6 @@ public class RedisPlugin implements DetectPlugin {
         } catch (Exception e) {
             log.error("Redis插件命令执行异常",e);
         }
-        return redisAddresses;
+        return CACHE_ADDRESS;
     }
 }

@@ -25,9 +25,11 @@ public class FileUtil {
      * 判断传入的路径是否存在
      * @param filePath
      * @return
-     * 文件不存在或是一个目录都会返回false
      */
     public static boolean isExist(String filePath){
+        if (filePath == null) {
+            return false;
+        }
         File file = new File(filePath);
         return file.exists();
     }
