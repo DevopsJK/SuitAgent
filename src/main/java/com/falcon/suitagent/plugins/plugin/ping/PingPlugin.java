@@ -119,6 +119,7 @@ public class PingPlugin implements DetectPlugin {
     public void init(Map<String, String> properties) {
         step = Integer.parseInt(properties.get("step"));
         Set<String> keys = properties.keySet();
+        addresses.clear();
         keys.stream().filter(Objects::nonNull).filter(key -> key.contains("address")).forEach(key -> {
             addresses.put(key,properties.get(key));
         });

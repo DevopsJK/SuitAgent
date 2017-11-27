@@ -51,6 +51,7 @@ public class HttpPlugin implements DetectPlugin {
         if (properties.get("http.read.timeout") != null){
             readTimeout = Integer.parseInt(properties.get("http.read.timeout"));
         }
+        addresses.clear();
         Set<String> keys = properties.keySet();
         keys.stream().filter(Objects::nonNull).filter(key -> key.contains("address")).forEach(key -> {
             addresses.put(key,properties.get(key));
