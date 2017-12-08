@@ -149,14 +149,17 @@ public class RabbitMQPlugin implements DetectPlugin {
     }
 
     private String getAPIResult(RabbitMQ rabbitMQ,String suffix){
-        HttpRequest httpRequest = new HttpRequest(String.format("http://%s:%s/%s",rabbitMQ.getIp(),rabbitMQ.getPort(),suffix),"GET")
+        String url = String.format("http://%s:%s/%s",rabbitMQ.getIp(),rabbitMQ.getPort(),suffix.replace("//","/"));
+        HttpRequest httpRequest = new HttpRequest(url,"GET")
                 .connectTimeout(10000).readTimeout(10000).trustAllCerts().trustAllHosts()
                 .authorization("Basic " + Base64.getEncoder().encodeToString(String.format("%s:%s",rabbitMQ.getUsername(),rabbitMQ.getPassword()).getBytes()));
         if (httpRequest.code() != 200){
-            log.error("获取API接口数据失败，code：{} ， body：{}",httpRequest.code(),httpRequest.body());
+            log.error("RabbitMQ获取API接口数据失败，url：{},code：{} ， body：{}",url,httpRequest.code(),httpRequest.body());
            return null;
         }
-        return httpRequest.body();
+        String body = httpRequest.body();
+        log.debug(body);
+        return body;
     }
 
 
@@ -391,6 +394,9 @@ public class RabbitMQPlugin implements DetectPlugin {
                     JSONObject jsonObject = (JSONObject) o;
                     String queueName = jsonObject.getString("name");
                     String vHost = jsonObject.getString("vhost");
+                    if (queueName == null || vHost == null) {
+                        continue;
+                    }
                     String tag = String.format("queue=%s,vhost=%s",queueName,vHost);
                     consumersCountTotal += jsonObject.getLong("consumers");
                     //队列消费者接收新消息的时间的比例
