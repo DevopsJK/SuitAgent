@@ -92,6 +92,10 @@ public class MongoDBPlugin implements DetectPlugin {
      */
     @Override
     public String agentSignName(String address) {
+        String[] split = address.split(":-->:");
+        if (split.length >= 2) {
+            return split[1];
+        }
         return null;
     }
 
@@ -128,17 +132,13 @@ public class MongoDBPlugin implements DetectPlugin {
                     JSONObject jsonObject = JSON.parseObject(json);
                     Map<String,Object> map = new HashMap<>();
                     JSONUtil.jsonToMap(map,jsonObject,null);
-                    String hostTag = "";
-                    if(map.get("host") != null){
-                        hostTag = "host=" + map.get("host");
-                    }
                     List<DetectResult.Metric> metrics = new ArrayList<>();
                     for (Map.Entry<String, Object> entry : map.entrySet()) {
                         if(NumberUtils.isNumber(String.valueOf(entry.getValue()))){
                             DetectResult.Metric metric = new DetectResult.Metric(entry.getKey(),
                                     String.valueOf(entry.getValue()),
                                     CounterType.GAUGE,
-                                    hostTag);
+                                    "");
                             metrics.add(metric);
                         }
                     }
@@ -189,7 +189,8 @@ public class MongoDBPlugin implements DetectPlugin {
                 for (String conf : confs) {
                     String port = getPortFromConfFile(conf);
                     if (port == null){
-                        log.warn("从配置文件{}未找到MongoDB的启动端口",conf);
+                        log.warn("从配置文件{}未找到MongoDB的启动端口，指定默认端口：27017",conf);
+                        ports.add("27017");
                     }else {
                         ports.add(port);
                     }
