@@ -42,6 +42,8 @@ public class SNMPV3MetricsValue extends MetricsCommon {
     private SNMPV3Plugin plugin;
     private List<SNMPV3UserInfo> snmpv3UserInfoList;
     private long timestamp;
+    private static final int TIMEOUT = 20;
+    private final BlockingQueue<Object> blockingQueue = new ArrayBlockingQueue<>(1);
 
     public SNMPV3MetricsValue(SNMPV3Plugin plugin, List<SNMPV3UserInfo> snmpv3UserInfoList, long timestamp) {
         this.plugin = plugin;
@@ -281,8 +283,6 @@ public class SNMPV3MetricsValue extends MetricsCommon {
             return result;
         }
 
-        int timeout = 20;
-        final BlockingQueue<Object> blockingQueue = new ArrayBlockingQueue<>(1);
 //        List<Future<List<FalconReportObject>>> futureList = new ArrayList<>();
         for (SNMPV3Session session : sessionList) {
 //            futureList.add(ExecuteThreadUtil.execute(new Collect(session)));
@@ -301,12 +301,12 @@ public class SNMPV3MetricsValue extends MetricsCommon {
 
             try {
                 //超时处理
-                Object resultBlocking = BlockingQueueUtil.getResult(blockingQueue, timeout, TimeUnit.SECONDS);
+                Object resultBlocking = BlockingQueueUtil.getResult(blockingQueue, TIMEOUT, TimeUnit.SECONDS);
                 blockingQueue.clear();
                 if (resultBlocking instanceof List) {
                     result.addAll((List<FalconReportObject>) resultBlocking);
                 }else if (resultBlocking == null){
-                    log.error("SNMP {} 获取报告对象超时{}秒",session.getUserInfo().getEndPoint(),timeout);
+                    log.error("SNMP {} 获取报告对象超时{}秒",session.getUserInfo().getEndPoint(),TIMEOUT);
                 }else if (resultBlocking instanceof Throwable){
                     log.error("SNMP {} 报告对象获取异常",session.getUserInfo().getEndPoint(),resultBlocking);
                 }else {
