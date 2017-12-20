@@ -9,12 +9,14 @@ package com.falcon.suitagent.plugins.metrics;
  */
 
 import com.falcon.suitagent.exception.AgentArgumentException;
-import com.falcon.suitagent.util.CommandUtilForUnix;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.plugins.SNMPV3Plugin;
 import com.falcon.suitagent.plugins.util.SNMPHelper;
 import com.falcon.suitagent.plugins.util.SNMPV3Session;
+import com.falcon.suitagent.util.BlockingQueueUtil;
+import com.falcon.suitagent.util.CommandUtilForUnix;
+import com.falcon.suitagent.util.ExecuteThreadUtil;
 import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.vo.snmp.IfStatVO;
 import com.falcon.suitagent.vo.snmp.SNMPV3UserInfo;
@@ -24,6 +26,9 @@ import org.snmp4j.smi.VariableBinding;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.falcon.suitagent.plugins.util.SNMPHelper.ignoreIfName;
@@ -276,16 +281,47 @@ public class SNMPV3MetricsValue extends MetricsCommon {
             return result;
         }
 
+        int timeout = 20;
+        final BlockingQueue<Object> blockingQueue = new ArrayBlockingQueue<>(1);
 //        List<Future<List<FalconReportObject>>> futureList = new ArrayList<>();
         for (SNMPV3Session session : sessionList) {
 //            futureList.add(ExecuteThreadUtil.execute(new Collect(session)));
-            result.addAll(getReports(session));
+
+            //阻塞队列异步执行
+            ExecuteThreadUtil.execute(() -> {
+                try {
+                    List<FalconReportObject> falconReportObjects = getReports(session);
+                    if (!blockingQueue.offer(falconReportObjects)){
+                        log.error("SNMP {} 报告对象 offer失败",session.getUserInfo().getEndPoint());
+                    }
+                } catch (Throwable t) {
+                    blockingQueue.offer(t);
+                }
+            });
 
             try {
-                session.close();
+                //超时处理
+                Object resultBlocking = BlockingQueueUtil.getResult(blockingQueue, timeout, TimeUnit.SECONDS);
+                blockingQueue.clear();
+                if (resultBlocking instanceof List) {
+                    result.addAll((List<FalconReportObject>) resultBlocking);
+                }else if (resultBlocking == null){
+                    log.error("SNMP {} 获取报告对象超时{}秒",session.getUserInfo().getEndPoint(),timeout);
+                }else if (resultBlocking instanceof Throwable){
+                    log.error("SNMP {} 报告对象获取异常",session.getUserInfo().getEndPoint(),resultBlocking);
+                }else {
+                    log.error("SNMP {} 未知结果类型：{}",session.getUserInfo().getEndPoint(),resultBlocking);
+                }
             } catch (Exception e) {
-                log.error("SNMP Session Close Exception",e);
+                log.error("SNMP {} 获取报告对象异常",session.getUserInfo().getEndPoint(),e);
+            }finally {
+                try {
+                    session.close();
+                } catch (Exception e) {
+                    log.error("SNMP Session Close Exception",e);
+                }
             }
+
         }
 //        for (Future<List<FalconReportObject>> future : futureList) {
 //            try {

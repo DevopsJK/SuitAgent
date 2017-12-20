@@ -30,8 +30,9 @@ public class BlockingQueueUtil {
         try {
             result = blockingQueue.poll(timeout, unit);
             if (result == null) {
-                if (!blockingQueue.offer(""))
+                if (!blockingQueue.offer("")) {
                     result = blockingQueue.take();
+                }
             }
         } catch (InterruptedException e) {
             throw ExceptionUtil.initCause(new InterruptedIOException(e.getMessage()), e);
