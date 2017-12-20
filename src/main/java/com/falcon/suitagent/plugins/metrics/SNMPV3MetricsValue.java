@@ -255,8 +255,8 @@ public class SNMPV3MetricsValue extends MetricsCommon {
 
         for (SNMPV3UserInfo snmpv3UserInfo : snmpv3UserInfoList) {
             //异步采集
-            final BlockingQueue<Object> blockingQueue = new ArrayBlockingQueue<>(1);
             ExecuteThreadUtil.execute(() -> {
+                final BlockingQueue<Object> blockingQueue = new ArrayBlockingQueue<>(1);
                 SNMPV3Session session;
                 try {
                     session = new SNMPV3Session(snmpv3UserInfo);
