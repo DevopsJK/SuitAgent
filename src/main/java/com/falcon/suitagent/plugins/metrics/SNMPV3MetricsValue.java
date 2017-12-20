@@ -46,8 +46,7 @@ public class SNMPV3MetricsValue extends MetricsCommon {
     private SNMPV3Plugin plugin;
     private List<SNMPV3UserInfo> snmpv3UserInfoList;
     private long timestamp;
-    private static final int TIMEOUT = 20;
-    private final BlockingQueue<Object> blockingQueue = new ArrayBlockingQueue<>(1);
+    private static final int TIMEOUT = 40;
 
     public SNMPV3MetricsValue(SNMPV3Plugin plugin, List<SNMPV3UserInfo> snmpv3UserInfoList, long timestamp) {
         this.plugin = plugin;
@@ -256,6 +255,7 @@ public class SNMPV3MetricsValue extends MetricsCommon {
 
         for (SNMPV3UserInfo snmpv3UserInfo : snmpv3UserInfoList) {
             //异步采集
+            final BlockingQueue<Object> blockingQueue = new ArrayBlockingQueue<>(1);
             ExecuteThreadUtil.execute(() -> {
                 SNMPV3Session session;
                 try {
