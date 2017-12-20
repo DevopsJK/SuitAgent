@@ -32,20 +32,20 @@ import java.util.List;
 public class SNMPHelper {
 
     /* 公共MIB的接口OID定义 */
-    public static final String ifNameOid = "1.3.6.1.2.1.31.1.1.1.1";
-    public static final String ifHCInOid = "1.3.6.1.2.1.31.1.1.1.6";
-    public static final String ifHCOutOid = "1.3.6.1.2.1.31.1.1.1.10";
-    public static final String ifHCInPktsOid = "1.3.6.1.2.1.31.1.1.1.7";
-    public static final String ifHCOutPktsOid = "1.3.6.1.2.1.31.1.1.1.11";
-    public static final String ifOperStatusOid = "1.3.6.1.2.1.2.2.1.8";
-    public static final String ifHCInBroadcastPktsOid = "1.3.6.1.2.1.31.1.1.1.9";
-    public static final String ifHCOutBroadcastPktsOid = "1.3.6.1.2.1.31.1.1.1.13";
-    public static final String ifHCInMulticastPktsOid = "1.3.6.1.2.1.31.1.1.1.8";
-    public static final String ifHCOutMulticastPktsOid = "1.3.6.1.2.1.31.1.1.1.12";
+    public static final String IF_NAME_OID = "1.3.6.1.2.1.31.1.1.1.1";
+    public static final String IF_HC_IN_OID = "1.3.6.1.2.1.31.1.1.1.6";
+    public static final String IF_HC_OUT_OID = "1.3.6.1.2.1.31.1.1.1.10";
+    public static final String IF_HC_IN_PKTS_OID = "1.3.6.1.2.1.31.1.1.1.7";
+    public static final String IF_HC_OUT_PKTS_OID = "1.3.6.1.2.1.31.1.1.1.11";
+    public static final String IF_OPER_STATUS_OID = "1.3.6.1.2.1.2.2.1.8";
+    public static final String IF_HC_IN_BROADCAST_PKTS_OID = "1.3.6.1.2.1.31.1.1.1.9";
+    public static final String IF_HC_OUT_BROADCAST_PKTS_OID = "1.3.6.1.2.1.31.1.1.1.13";
+    public static final String IF_HC_IN_MULTICAST_PKTS_OID = "1.3.6.1.2.1.31.1.1.1.8";
+    public static final String IF_HC_OUT_MULTICAST_PKTS_OID = "1.3.6.1.2.1.31.1.1.1.12";
     /* 忽略的接口，如Nu匹配ifName为*Nu*的接口 */
-    public static final List<String> ignoreIfName = Arrays.asList("Nu", "NU", "Vlan", "Vl", "LoopBack");
+    public static final List<String> IGNORE_IF_NAME = Arrays.asList("Nu", "NU", "Vlan", "Vl", "LoopBack");
 
-    public static final String sysDescOid = "1.3.6.1.2.1.1.1.0";
+    public static final String SYS_DESC_OID = "1.3.6.1.2.1.1.1.0";
 
     /**
      * 判断传入的PDU是否带有可用的监控数据(PDU携带的第一个VariableBinding对象)

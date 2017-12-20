@@ -11,6 +11,7 @@ package com.falcon.suitagent.plugins.metrics;
 import com.falcon.suitagent.exception.AgentArgumentException;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.falcon.FalconReportObject;
+import com.falcon.suitagent.falcon.ReportMetrics;
 import com.falcon.suitagent.plugins.SNMPV3Plugin;
 import com.falcon.suitagent.plugins.util.SNMPHelper;
 import com.falcon.suitagent.plugins.util.SNMPV3Session;
@@ -31,7 +32,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.falcon.suitagent.plugins.util.SNMPHelper.ignoreIfName;
+import static com.falcon.suitagent.plugins.util.SNMPHelper.IGNORE_IF_NAME;
 
 /**
  * @author guqiu@yiji.com
@@ -100,7 +101,7 @@ public class SNMPV3MetricsValue extends MetricsCommon {
 
         //允许采集接口数据且允许采集的接口名称不为空
         if (plugin.hasIfCollect() && !ifNameEnables.isEmpty()) {
-            List<PDU> ifNameList = session.walk(SNMPHelper.ifNameOid);
+            List<PDU> ifNameList = session.walk(SNMPHelper.IF_NAME_OID);
 
             List<IfStatVO> statVOs = new ArrayList<>();
 
@@ -108,7 +109,7 @@ public class SNMPV3MetricsValue extends MetricsCommon {
                 VariableBinding ifName = pdu.get(0);
                 boolean check = ifNameEnables.contains(ifName.getVariable().toString());
                 if (check) {
-                    for (String ignore : ignoreIfName) {
+                    for (String ignore : IGNORE_IF_NAME) {
                         if (ifName.getVariable().toString().contains(ignore)) {
                             check = false;
                             break;
@@ -116,44 +117,44 @@ public class SNMPV3MetricsValue extends MetricsCommon {
                     }
                 }
                 if (check) {
-                    int index = Integer.parseInt(ifName.getOid().toString().replace(SNMPHelper.ifNameOid, "").replace(".", ""));
+                    int index = Integer.parseInt(ifName.getOid().toString().replace(SNMPHelper.IF_NAME_OID, "").replace(".", ""));
                     IfStatVO statVO = new IfStatVO();
                     statVO.setIfName(ifName.getVariable().toString());
                     statVO.setIfIndex(index);
                     if (hasIfCollection("if.HCInBroadcastPkts")) {
-                        PDU ifHCInBroadcast = session.get(SNMPHelper.ifHCInBroadcastPktsOid + "." + index);
+                        PDU ifHCInBroadcast = session.get(SNMPHelper.IF_HC_IN_BROADCAST_PKTS_OID + "." + index);
                         statVO.setIfHCInBroadcastPkts(SNMPHelper.getValueFromPDU(ifHCInBroadcast));
                     }
                     if (hasIfCollection("if.HCInMulticastPkts")) {
-                        PDU ifHCInMulticast = session.get(SNMPHelper.ifHCInMulticastPktsOid + "." + index);
+                        PDU ifHCInMulticast = session.get(SNMPHelper.IF_HC_IN_MULTICAST_PKTS_OID + "." + index);
                         statVO.setIfHCInMulticastPkts(SNMPHelper.getValueFromPDU(ifHCInMulticast));
                     }
                     if (hasIfCollection("if.HCInOctets")) {
-                        PDU ifIn = session.get(SNMPHelper.ifHCInOid + "." + index);
+                        PDU ifIn = session.get(SNMPHelper.IF_HC_IN_OID + "." + index);
                         statVO.setIfHCInOctets(SNMPHelper.getValueFromPDU(ifIn));
                     }
                     if (hasIfCollection("if.HCOutOctets")) {
-                        PDU ifOut = session.get(SNMPHelper.ifHCOutOid + "." + index);
+                        PDU ifOut = session.get(SNMPHelper.IF_HC_OUT_OID + "." + index);
                         statVO.setIfHCOutOctets(SNMPHelper.getValueFromPDU(ifOut));
                     }
                     if (hasIfCollection("if.HCInUcastPkts")) {
-                        PDU ifHCIn = session.get(SNMPHelper.ifHCInPktsOid + "." + index);
+                        PDU ifHCIn = session.get(SNMPHelper.IF_HC_IN_PKTS_OID + "." + index);
                         statVO.setIfHCInUcastPkts(SNMPHelper.getValueFromPDU(ifHCIn));
                     }
                     if (hasIfCollection("if.getIfHCOutUcastPkts")) {
-                        PDU ifHCOut = session.get(SNMPHelper.ifHCOutPktsOid + "." + index);
+                        PDU ifHCOut = session.get(SNMPHelper.IF_HC_OUT_PKTS_OID + "." + index);
                         statVO.setIfHCOutUcastPkts(SNMPHelper.getValueFromPDU(ifHCOut));
                     }
                     if (hasIfCollection("if.OperStatus")) {
-                        PDU ifOperStatus = session.get(SNMPHelper.ifOperStatusOid + "." + index);
+                        PDU ifOperStatus = session.get(SNMPHelper.IF_OPER_STATUS_OID + "." + index);
                         statVO.setIfOperStatus(SNMPHelper.getValueFromPDU(ifOperStatus));
                     }
                     if (hasIfCollection("if.HCOutBroadcastPkts")) {
-                        PDU ifHCOutBroadcast = session.get(SNMPHelper.ifHCOutBroadcastPktsOid + "." + index);
+                        PDU ifHCOutBroadcast = session.get(SNMPHelper.IF_HC_OUT_BROADCAST_PKTS_OID + "." + index);
                         statVO.setIfHCOutBroadcastPkts(SNMPHelper.getValueFromPDU(ifHCOutBroadcast));
                     }
                     if (hasIfCollection("if.HCOutMulticastPkts")) {
-                        PDU ifHCOutMulticast = session.get(SNMPHelper.ifHCOutMulticastPktsOid + "." + index);
+                        PDU ifHCOutMulticast = session.get(SNMPHelper.IF_HC_OUT_MULTICAST_PKTS_OID + "." + index);
                         statVO.setIfHCOutMulticastPkts(SNMPHelper.getValueFromPDU(ifHCOutMulticast));
                     }
 
@@ -263,77 +264,69 @@ public class SNMPV3MetricsValue extends MetricsCommon {
 
     /**
      * 获取所有的监控值报告
-     *
+     *该插件处理中异步数据上报，不需要统一上报
      * @return
+     * Empty List
      * @throws IOException
      */
     @Override
     public Collection<FalconReportObject> getReportObjects() {
-        Set<FalconReportObject> result = new HashSet<>();
+//        Set<FalconReportObject> result = new HashSet<>();
         List<SNMPV3Session> sessionList;
         try {
             sessionList = getSessions();
         } catch (IOException e) {
             log.warn("获取SNMP连接发生异常,push allUnVariability不可用报告", e);
-            result.add(generatorVariabilityReport(false, "allUnVariability",timestamp, plugin.step(), plugin, plugin.serverName()));
-            return result;
+            return Collections.singleton(generatorVariabilityReport(false, "allUnVariability",timestamp, plugin.step(), plugin, plugin.serverName()));
 
         } catch (AgentArgumentException e) {
             log.error("监控参数异常:{},忽略此监控上报", e.getErr(), e);
-            return result;
+            return new ArrayList<>();
         }
 
-//        List<Future<List<FalconReportObject>>> futureList = new ArrayList<>();
         for (SNMPV3Session session : sessionList) {
-//            futureList.add(ExecuteThreadUtil.execute(new Collect(session)));
-
-            //阻塞队列异步执行
+            //异步采集
             ExecuteThreadUtil.execute(() -> {
-                try {
-                    List<FalconReportObject> falconReportObjects = getReports(session);
-                    if (!blockingQueue.offer(falconReportObjects)){
-                        log.error("SNMP {} 报告对象 offer失败",session.getUserInfo().getEndPoint());
+                //阻塞队列异步执行
+                ExecuteThreadUtil.execute(() -> {
+                    try {
+                        List<FalconReportObject> falconReportObjects = getReports(session);
+                        if (!blockingQueue.offer(falconReportObjects)){
+                            log.error("SNMP {} 报告对象 offer失败",session.getUserInfo().getEndPoint());
+                        }
+                    } catch (Throwable t) {
+                        blockingQueue.offer(t);
                     }
-                } catch (Throwable t) {
-                    blockingQueue.offer(t);
+                });
+
+                try {
+                    //超时处理
+                    Object resultBlocking = BlockingQueueUtil.getResult(blockingQueue, TIMEOUT, TimeUnit.SECONDS);
+                    blockingQueue.clear();
+                    if (resultBlocking instanceof List) {
+                        List<FalconReportObject> falconReportObjects = (List<FalconReportObject>) resultBlocking;
+                        //即时上报采集数据
+                        ReportMetrics.push(falconReportObjects);
+                    }else if (resultBlocking == null){
+                        log.error("SNMP {} 获取报告对象超时{}秒",session.getUserInfo().getEndPoint(), TIMEOUT);
+                    }else if (resultBlocking instanceof Throwable){
+                        log.error("SNMP {} 报告对象获取异常",session.getUserInfo().getEndPoint(),resultBlocking);
+                    }else {
+                        log.error("SNMP {} 未知结果类型：{}",session.getUserInfo().getEndPoint(),resultBlocking);
+                    }
+                } catch (Exception e) {
+                    log.error("SNMP {} 获取报告对象异常",session.getUserInfo().getEndPoint(),e);
+                }finally {
+                    try {
+                        session.close();
+                    } catch (Exception e) {
+                        log.error("SNMP Session Close Exception",e);
+                    }
                 }
             });
-
-            try {
-                //超时处理
-                Object resultBlocking = BlockingQueueUtil.getResult(blockingQueue, TIMEOUT, TimeUnit.SECONDS);
-                blockingQueue.clear();
-                if (resultBlocking instanceof List) {
-                    result.addAll((List<FalconReportObject>) resultBlocking);
-                }else if (resultBlocking == null){
-                    log.error("SNMP {} 获取报告对象超时{}秒",session.getUserInfo().getEndPoint(),TIMEOUT);
-                }else if (resultBlocking instanceof Throwable){
-                    log.error("SNMP {} 报告对象获取异常",session.getUserInfo().getEndPoint(),resultBlocking);
-                }else {
-                    log.error("SNMP {} 未知结果类型：{}",session.getUserInfo().getEndPoint(),resultBlocking);
-                }
-            } catch (Exception e) {
-                log.error("SNMP {} 获取报告对象异常",session.getUserInfo().getEndPoint(),e);
-            }finally {
-                try {
-                    session.close();
-                } catch (Exception e) {
-                    log.error("SNMP Session Close Exception",e);
-                }
-            }
-
         }
-//        for (Future<List<FalconReportObject>> future : futureList) {
-//            try {
-//                if(future != null){
-//                    result.addAll(future.get());
-//                }
-//            } catch (Exception e) {
-//                log.error("SNMP采集异常，target：{}",e);
-//            }
-//        }
-
-        return result;
+        //该插件处理中异步数据上报，不需要统一上报
+        return new ArrayList<>();
     }
 
     private List<FalconReportObject> getReports(SNMPV3Session session){
@@ -377,18 +370,5 @@ public class SNMPV3MetricsValue extends MetricsCommon {
         return temp;
     }
 
-//    private class Collect implements Callable<List<FalconReportObject>>{
-//
-//        private SNMPV3Session session;
-//
-//        public Collect(SNMPV3Session session) {
-//            this.session = session;
-//        }
-//
-//        @Override
-//        public List<FalconReportObject> call() throws Exception {
-//            return getReports(session);
-//        }
-//    }
-
 }
+

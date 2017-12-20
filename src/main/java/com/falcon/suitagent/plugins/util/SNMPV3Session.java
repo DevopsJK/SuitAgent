@@ -102,7 +102,7 @@ public class SNMPV3Session {
     public boolean isValid(){
         try {
             //超时将会返回null
-            return SNMPHelper.snmpGet(snmp,target,SNMPHelper.sysDescOid) != null;
+            return SNMPHelper.snmpGet(snmp,target,SNMPHelper.SYS_DESC_OID) != null;
         } catch (Exception e) {
             log.error("SNMP连接({}:{}-{})可用性检测为失败(不可用)",userInfo.getAddress(),userInfo.getPort(),userInfo.getEndPoint(),e);
             return false;
@@ -155,7 +155,7 @@ public class SNMPV3Session {
         if(sysDesc != null){
             return sysDesc;
         }
-        PDU pdu = this.get(SNMPHelper.sysDescOid);
+        PDU pdu = this.get(SNMPHelper.SYS_DESC_OID);
         if(pdu != null){
             sysDesc = pdu.get(0).getVariable().toString();
             infoCache.put(key,sysDesc);
