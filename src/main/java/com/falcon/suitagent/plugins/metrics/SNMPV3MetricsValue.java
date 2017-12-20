@@ -26,7 +26,10 @@ import org.snmp4j.PDU;
 import org.snmp4j.smi.VariableBinding;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -50,27 +53,6 @@ public class SNMPV3MetricsValue extends MetricsCommon {
         this.plugin = plugin;
         this.snmpv3UserInfoList = snmpv3UserInfoList;
         this.timestamp = timestamp;
-    }
-
-    /**
-     * 获取SNMP的session
-     *
-     * @return
-     * @throws IOException
-     * @throws AgentArgumentException
-     */
-    public List<SNMPV3Session> getSessions() throws IOException, AgentArgumentException {
-        List<SNMPV3Session> pluginSessions = new ArrayList<>();
-
-        Collection<SNMPV3UserInfo> userInfoCollection = snmpv3UserInfoList;
-        if (userInfoCollection != null) {
-            for (SNMPV3UserInfo userInfo : userInfoCollection) {
-                SNMPV3Session session = new SNMPV3Session(userInfo);
-                pluginSessions.add(session);
-            }
-        }
-
-        return pluginSessions;
     }
 
     /**
@@ -271,28 +253,27 @@ public class SNMPV3MetricsValue extends MetricsCommon {
      */
     @Override
     public Collection<FalconReportObject> getReportObjects() {
-//        Set<FalconReportObject> result = new HashSet<>();
-        List<SNMPV3Session> sessionList;
-        try {
-            sessionList = getSessions();
-        } catch (IOException e) {
-            log.warn("获取SNMP连接发生异常,push allUnVariability不可用报告", e);
-            return Collections.singleton(generatorVariabilityReport(false, "allUnVariability",timestamp, plugin.step(), plugin, plugin.serverName()));
 
-        } catch (AgentArgumentException e) {
-            log.error("监控参数异常:{},忽略此监控上报", e.getErr(), e);
-            return new ArrayList<>();
-        }
-
-        for (SNMPV3Session session : sessionList) {
+        for (SNMPV3UserInfo snmpv3UserInfo : snmpv3UserInfoList) {
             //异步采集
             ExecuteThreadUtil.execute(() -> {
+                SNMPV3Session session;
+                try {
+                    session = new SNMPV3Session(snmpv3UserInfo);
+                } catch (IOException e) {
+                    log.warn("获取SNMP连接{}发生异常,push不可用报告",snmpv3UserInfo, e);
+                    ReportMetrics.push(generatorVariabilityReport(false, snmpv3UserInfo.getEndPoint(),timestamp, plugin.step(), plugin, plugin.serverName()));
+                    return;
+                } catch (AgentArgumentException e) {
+                    log.error("监控参数异常:{},忽略此监控上报", e.getErr(), e);
+                    return;
+                }
                 //阻塞队列异步执行
                 ExecuteThreadUtil.execute(() -> {
                     try {
                         List<FalconReportObject> falconReportObjects = getReports(session);
                         if (!blockingQueue.offer(falconReportObjects)){
-                            log.error("SNMP {} 报告对象 offer失败",session.getUserInfo().getEndPoint());
+                            log.error("SNMP {} 报告对象 offer失败", session.getUserInfo().getEndPoint());
                         }
                     } catch (Throwable t) {
                         blockingQueue.offer(t);
@@ -324,7 +305,9 @@ public class SNMPV3MetricsValue extends MetricsCommon {
                     }
                 }
             });
+
         }
+
         //该插件处理中异步数据上报，不需要统一上报
         return new ArrayList<>();
     }
