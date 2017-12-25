@@ -18,7 +18,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /*
  * 修订记录:
@@ -33,7 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class ElasticSearchConfig {
 
-    private static final ConcurrentHashMap<String,Map<String,Object>> cache = new ConcurrentHashMap<>();
 
     /**
      * 根据进程id获取elasticSearch的配置文件配置
@@ -46,12 +44,7 @@ public class ElasticSearchConfig {
         String key = StringUtils.getStringByInt(pid);
 
         //读取缓存
-        Map<String,Object> result = cache.get(key);
-        if(result != null){
-            return result;
-        }else{
-            result = new HashMap<>();
-        }
+        Map<String,Object> result = new HashMap<>();
 
         String cmd = "ls -al /proc/" + pid + "/fd/" + " | grep elasticsearch";
         CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,10);
@@ -75,7 +68,6 @@ public class ElasticSearchConfig {
                 path += File.separator + "config" + File.separator + "elasticsearch.yml";
                 try {
                     result = Yaml.loadType(new FileInputStream(path), HashMap.class);
-                    cache.put(key,result);
                 } catch (YamlException e) {
                     log.warn("配置文件解析失败,配置文件可能未配置任何内容",e);
                 }catch (FileNotFoundException e){
@@ -86,14 +78,6 @@ public class ElasticSearchConfig {
             log.error("命令 {} 执行失败,错误信息:\r\n{}",cmd,executeResult.msg);
         }
         return result;
-    }
-
-    /**
-     * 根据PID移除缓存
-     * @param pid
-     */
-    static void removeCache(int pid){
-        cache.remove(StringUtils.getStringByInt(pid));
     }
 
     /**
@@ -122,7 +106,7 @@ public class ElasticSearchConfig {
         String name = (String) getConfig(pid).get("network.host");
         //未配置,返回默认配置值
         if(StringUtils.isEmpty(name)){
-            return "localhost";
+            return "127.0.0.1";
         }else{
             return name;
         }
@@ -220,16 +204,21 @@ public class ElasticSearchConfig {
                 String nodeId = entry.getKey();
                 JSONObject nodeInfo = (JSONObject) entry.getValue();
                 String nodeName = nodeInfo.getString("name");
-                String http_address = nodeInfo.getString("http_address");
-                if("127.0.0.1".equals(netWorkHost) || "localhost".equals(netWorkHost)){
-                    if(http_address.contains("127.0.0.1:" + port) || http_address.contains("localhost:" + port)){
-                        selfNodeId = nodeId;
-                        selfNodeName = nodeName;
-                    }
-                }else{
-                    if(http_address.contains(netWorkHost + ":" + port)){
-                        selfNodeId = nodeId;
-                        selfNodeName = nodeName;
+                String httpAddress = nodeInfo.getString("http_address");
+                if (StringUtils.isEmpty(httpAddress)) {
+                    selfNodeId = nodeId;
+                    selfNodeName = nodeName;
+                }else {
+                    if("127.0.0.1".equals(netWorkHost) || "localhost".equals(netWorkHost)){
+                        if(httpAddress.contains("127.0.0.1:" + port) || httpAddress.contains("localhost:" + port)){
+                            selfNodeId = nodeId;
+                            selfNodeName = nodeName;
+                        }
+                    }else{
+                        if(httpAddress.contains(netWorkHost + ":" + port)){
+                            selfNodeId = nodeId;
+                            selfNodeName = nodeName;
+                        }
                     }
                 }
             }

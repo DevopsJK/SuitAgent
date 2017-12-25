@@ -9,16 +9,15 @@ package com.falcon.suitagent.plugins.plugin.elasticSearch;
  */
 
 import com.alibaba.fastjson.JSONObject;
+import com.falcon.suitagent.falcon.CounterType;
+import com.falcon.suitagent.falcon.FalconReportObject;
 import com.falcon.suitagent.jmx.vo.JMXMetricsValueInfo;
 import com.falcon.suitagent.plugins.JMXPlugin;
-import com.falcon.suitagent.plugins.Plugin;
+import com.falcon.suitagent.plugins.metrics.MetricsCommon;
 import com.falcon.suitagent.plugins.util.PluginActivateType;
 import com.falcon.suitagent.util.CommandUtilForUnix;
 import com.falcon.suitagent.util.HttpUtil;
 import com.falcon.suitagent.util.StringUtils;
-import com.falcon.suitagent.falcon.CounterType;
-import com.falcon.suitagent.falcon.FalconReportObject;
-import com.falcon.suitagent.plugins.metrics.MetricsCommon;
 import lombok.extern.slf4j.Slf4j;
 import org.ho.yaml.Yaml;
 
@@ -40,7 +39,7 @@ public class ElasticSearchPlugin implements JMXPlugin {
     private int step;
     private PluginActivateType pluginActivateType;
     private String pluginDir;
-    private final static String metricsConfFile = "elasticSearchMetricsConf.yml";
+    private final static String METRICS_CONF_FILE = "elasticSearchMetricsConf.yml";
     private static String lastAgentSignName = "";
 
     /**
@@ -96,29 +95,15 @@ public class ElasticSearchPlugin implements JMXPlugin {
      */
     @Override
     public Collection<FalconReportObject> inbuiltReportObjectsForValid(JMXMetricsValueInfo metricsValueInfo) {
-        String support = "2.2.1";
         // 指定配置中配置的监控值
         int pid = metricsValueInfo.getJmxConnectionInfo().getPid();
 
 
         Set<FalconReportObject> result = new HashSet<>();
-        String configPath = pluginDir + File.separator + metricsConfFile;
+        String configPath = pluginDir + File.separator + METRICS_CONF_FILE;
         try {
             String version = ElasticSearchConfig.getVersion(pid);
-            if (StringUtils.isEmpty(version)){
-                log.warn("ES版本获取失败，该插件目前支持的ES版本为：{}",support);
-                return new ArrayList<>();
-            }else {
-                String[] supports = support.split("\\.");
-                String[] ver_s = version.split("\\.");
-                for (int i=0;i<3;i++){
-                    if (Integer.parseInt(ver_s[i]) > Integer.parseInt(supports[i])){
-                        log.warn("不支持当前ES版本（{}），本插件支持的ES版本为 {}",version,support);
-                        return new ArrayList<>();
-                    }
-                }
-            }
-
+            log.info("ES 版本：{}",version);
             String selfNodeId = ElasticSearchConfig.getNodeId(pid);
             String selfNodeName = ElasticSearchConfig.getNodeName(pid);
             if(StringUtils.isEmpty(selfNodeId) || StringUtils.isEmpty(selfNodeName)){

@@ -5,6 +5,7 @@
 package com.falcon.suitagent.falcon;
 
 import com.falcon.suitagent.util.StringUtils;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -21,6 +22,7 @@ import javax.management.ObjectName;
  * @author guqiu@yiji.com
  */
 @ToString
+@EqualsAndHashCode
 public class FalconReportObject implements Cloneable{
 
     /**
