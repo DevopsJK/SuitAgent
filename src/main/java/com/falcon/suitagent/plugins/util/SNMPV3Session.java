@@ -9,6 +9,7 @@ package com.falcon.suitagent.plugins.util;
  */
 
 import com.falcon.suitagent.exception.AgentArgumentException;
+import com.falcon.suitagent.util.HostUtil;
 import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.vo.snmp.SNMPV3UserInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -75,7 +77,9 @@ public class SNMPV3Session {
 
         this.userInfo = userInfo;
         snmp = new Snmp(new DefaultUdpTransportMapping());
-        USM usm = new USM(SecurityProtocols.getInstance(), new OctetString(MPv3.createLocalEngineID()), 0);
+        USM usm = new USM(SecurityProtocols.getInstance(), new OctetString(MPv3.createLocalEngineID(
+                new OctetString(HostUtil.getHostIp() + UUID.randomUUID().toString())
+        )), 0);
         SecurityModels.getInstance().addSecurityModel(usm);
         snmp.listen();
 
