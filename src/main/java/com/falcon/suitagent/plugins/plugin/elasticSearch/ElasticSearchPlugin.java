@@ -8,6 +8,7 @@ package com.falcon.suitagent.plugins.plugin.elasticSearch;
  * guqiu@yiji.com 2016-06-27 18:03 创建
  */
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.falcon.FalconReportObject;
@@ -125,7 +126,7 @@ public class ElasticSearchPlugin implements JMXPlugin {
                         String tag = config.get("tag");
                         if("get".equalsIgnoreCase(method)){
                             String responseText = HttpUtil.get(url).getResult();
-                            JSONObject jsonObject = JSONObject.parseObject(responseText);
+                            JSONObject jsonObject = JSON.parseObject(responseText);
                             if(jsonObject != null){
                                 String[] paths = valuePath.split("\\.");
                                 for(int i=0;i<paths.length;i++){
@@ -153,6 +154,10 @@ public class ElasticSearchPlugin implements JMXPlugin {
                                         }
                                     }else{
                                         jsonObject = jsonObject.getJSONObject(paths[i]);
+                                        if (jsonObject == null) {
+                                            log.warn("JSON Path：{}下，无 {} 节点数据",paths,paths[i]);
+                                            break;
+                                        }
                                     }
                                 }
                             }
