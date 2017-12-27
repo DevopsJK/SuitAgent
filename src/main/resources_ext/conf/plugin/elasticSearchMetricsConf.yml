@@ -33,12 +33,6 @@
 #   tag : ""
 ################################################################################################
 
-SuitAgentEsAggregator.1 :
-  newMetric : "my-es-aggregator-metric"
-  valueScript : "newValue = nodes-stats-index_total - nodes-stats-fsTotal"
-  counterType : "GAUGE"
-  tag : ""
-
 _cluster/health.1 :
    method : "GET"
    metrics : "cluster-health-status"
