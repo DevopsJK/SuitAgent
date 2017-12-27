@@ -18,10 +18,7 @@ import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /*
@@ -327,6 +324,61 @@ public abstract class MetricsCommon {
         }
 
         return newValue;
+    }
+
+    /**
+     * 执行js表达式并返回执行后的结果
+     * @param express
+     * 表达式
+     * @param valueMap
+     * 需要初始化给JS引擎的变量
+     * key：变量名（将自动使用{@link MetricsCommon#legitimationJsEngineVariableName(java.lang.String)}进行合法化）
+     * value：变量值
+     * @return
+     * 返回新值或返回原值(执行失败时)
+     */
+    public static Object executeJsExpress(String express, Map<String,Object> valueMap){
+        Object newValue = "";
+        if(!StringUtils.isEmpty(express)){
+            try {
+                ScriptEngineManager manager = new ScriptEngineManager();
+                ScriptEngine engine = manager.getEngineByName("nashorn");
+                engine.put("newValue", "");
+                for (String key : valueMap.keySet()) {
+                    try {
+                        engine.put(legitimationJsEngineVariableName(key),valueMap.get(key));
+                    } catch (Exception e) {
+                        log.error("JS Engine赋值变量失败 {}={}",key,valueMap.get(key),e);
+                    }
+                }
+                engine.getBindings(ScriptContext.ENGINE_SCOPE);
+                engine.eval(express);
+                newValue = engine.get("newValue");
+            } catch (ScriptException e) {
+                log.error("执行js表达式错误",e);
+            }
+        }
+
+        return newValue;
+    }
+
+    /**
+     * 合法化传入JS引擎的变量名
+     * @param variableName
+     * 待传入的变量名
+     * @return
+     * 合法化后的变量名
+     */
+    public static String legitimationJsEngineVariableName(String variableName) {
+        if (variableName != null) {
+            String[] illegal = {"-",".",">","<",",","/","\\","\"","'",
+                    ":",";","[","]","{","}","+","=","*","^","#","$","%","!","`","~","?","&"};
+            for (String s : illegal) {
+                variableName = variableName.replace(s,"");
+            }
+            return variableName;
+        }
+        return "";
     }
 
     /**

@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.falcon.suitagent.plugins.metrics.MetricsCommon.executeJsExpress;
 
@@ -110,12 +111,20 @@ public class ElasticSearchPlugin implements JMXPlugin {
             if(StringUtils.isEmpty(selfNodeId) || StringUtils.isEmpty(selfNodeName)){
                 log.error("获取es:{} 的服务信息失败",metricsValueInfo.getJmxConnectionInfo().getName());
             }else{
-                HashMap<String,Object> confMap = Yaml.loadType(new FileInputStream(configPath),HashMap.class);
-                if(confMap != null){
-                    for (String key : confMap.keySet()) {
-                        String urlSuffix = key.substring(0,key.lastIndexOf('.'));
+                HashMap<String,Object> metricsConfMap = Yaml.loadType(new FileInputStream(configPath),HashMap.class);
+                if(metricsConfMap != null){
+                    //服务的标识后缀名
+                    String name = metricsValueInfo.getJmxConnectionInfo().getName();
+                    Set<String> keys = metricsConfMap.keySet();
+                    Set<String> esIfUrls = keys.stream().filter(s -> !s.startsWith("SuitAgentEsAggregator")).collect(Collectors.toSet());
+                    Set<String> aggregators = keys.stream().filter(s -> s.startsWith("SuitAgentEsAggregator")).collect(Collectors.toSet());
+                    Map<String,Object> allMetrics = new HashMap<>();
+
+                    //自定义配置指标
+                    for (String esIfUrl : esIfUrls) {
+                        String urlSuffix = esIfUrl.substring(0,esIfUrl.lastIndexOf('.'));
                         String url = ElasticSearchConfig.getConnectionUrl(pid) + "/" + urlSuffix;
-                        Map<String,String> config = (Map<String, String>) confMap.get(key);
+                        Map<String,String> config = (Map<String, String>) metricsConfMap.get(esIfUrl);
 
                         String method = config.get("method");
                         String metrics = config.get("metrics");
@@ -133,17 +142,17 @@ public class ElasticSearchPlugin implements JMXPlugin {
                                     if(i == paths.length -1){
                                         Object value = jsonObject.get(paths[i]);
                                         if(value instanceof JSONObject){
-                                            log.error("elasticSearch http获取值异常,检查{}路径(valuePath)是否为叶子节点:{}",key,config.get("valuePath"));
+                                            log.error("elasticSearch http获取值异常,检查{}路径(valuePath)是否为叶子节点:{}",esIfUrl,config.get("valuePath"));
                                         }else{
-                                            //服务的标识后缀名
-                                            String name = metricsValueInfo.getJmxConnectionInfo().getName();
 
                                             FalconReportObject falconReportObject = new FalconReportObject();
                                             MetricsCommon.setReportCommonValue(falconReportObject,step);
                                             falconReportObject.setTimestamp(metricsValueInfo.getTimestamp());
                                             falconReportObject.setMetric(MetricsCommon.getMetricsName(metrics));
 
-                                            falconReportObject.setValue(String.valueOf(executeJsExpress(valueExpress,value)));
+                                            value = executeJsExpress(valueExpress,value);
+                                            falconReportObject.setValue(String.valueOf(value));
+                                            allMetrics.put(metrics,value);
 
                                             falconReportObject.setCounterType(CounterType.valueOf(counterType));
 
@@ -162,6 +171,42 @@ public class ElasticSearchPlugin implements JMXPlugin {
                                 }
                             }
                         }
+                    }
+
+                    //聚合指标
+                    for (String aggregator : aggregators) {
+                        Map<String,String> config = (Map<String, String>) metricsConfMap.get(aggregator);
+                        String newMetric = config.get("newMetric");
+                        String valueScript = config.get("valueScript");
+                        String counterType = config.get("counterType");
+                        String tag = config.get("tag");
+
+                        //合法化可能出现的变量名
+                        if (StringUtils.isNotEmpty(valueScript)) {
+                            for (String metric : allMetrics.keySet()) {
+                                if (valueScript.contains(metric)) {
+                                    valueScript = valueScript.replace(
+                                            metric,
+                                            MetricsCommon.legitimationJsEngineVariableName(metric)
+                                    );
+                                }
+                            }
+                            FalconReportObject falconReportObject = new FalconReportObject();
+                            MetricsCommon.setReportCommonValue(falconReportObject,step);
+                            falconReportObject.setTimestamp(metricsValueInfo.getTimestamp());
+                            falconReportObject.setMetric(MetricsCommon.getMetricsName(newMetric));
+
+                            Object value = executeJsExpress(valueScript,allMetrics);
+                            falconReportObject.setValue(String.valueOf(value));
+
+                            falconReportObject.setCounterType(CounterType.valueOf(counterType));
+
+                            falconReportObject.appendTags(MetricsCommon.getTags(name,this,serverName())).
+                                    appendTags(tag);
+
+                            result.add(falconReportObject);
+                        }
+
                     }
                 }
             }

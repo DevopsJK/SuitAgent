@@ -9,6 +9,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.apache.commons.lang.math.NumberUtils;
 
 import javax.management.ObjectName;
 
@@ -53,7 +54,6 @@ public class FalconReportObject implements Cloneable{
      * 代表该metric在当前时间点的值,数值类型
      */
     @Getter
-    @Setter
     private String value;
     /**
      * 只能是COUNTER或者GAUGE二选一，前者表示该数据采集项为计时器类型，后者表示其为原值 (注意大小写)
@@ -106,5 +106,13 @@ public class FalconReportObject implements Cloneable{
 
     public void setTags(String tags) {
         this.tags = tags.replace("\"","");
+    }
+
+    public void setValue(String value) {
+        if (NumberUtils.isNumber(value) && value.contains("E")) {
+            this.value = String.format("%.3f",NumberUtils.toDouble(value)).replace(".000","");
+        }else {
+            this.value = value;
+        }
     }
 }

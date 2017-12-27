@@ -16,6 +16,29 @@
 #             注:因open falcon系统的限制,请保证获取的监控值为数字类型
 ################################################################################################
 
+################################################################################################
+#                   自定义聚合指标配置
+# 配置示例说明:如
+# SuitAgentEsAggregator.1 :   [.符号前面的字符为固定写法，自定义聚合指标配置必须带上，否则被认为是es监控属性。.符号后面为保证配置的key唯一,只要不重复就可以]
+#   newMetric : ""            [聚合计算后新的指标名称]
+#   valueScript : ""          [新指标的聚合计算逻辑，使用JS代码进行编码，必须将新聚合值赋值给newValue变量。其他可计算的变量为已配置的es监控属性指标名称，既metrics名称]
+#   counterType : ""          [数据采集项类型只能配置 GAUGE(上传什么样的值，就原封不动的存储) 或 COUNTER(存储和展现的时候，会被计算为speed，即（当前值 - 上次值）/ 时间间隔)]
+#   tag : ""                  [标签 (可选)]
+#
+# 例如：
+# SuitAgentEsAggregator.1 :
+#   newMetric : "my-es-aggregator-metric"
+#   valueScript : "newValue = nodes-stats-index_total + nodes-stats-fsTotal"
+#   counterType : "GAUGE"
+#   tag : ""
+################################################################################################
+
+SuitAgentEsAggregator.1 :
+  newMetric : "my-es-aggregator-metric"
+  valueScript : "newValue = nodes-stats-index_total - nodes-stats-fsTotal"
+  counterType : "GAUGE"
+  tag : ""
+
 _cluster/health.1 :
    method : "GET"
    metrics : "cluster-health-status"
