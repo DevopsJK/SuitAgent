@@ -13,6 +13,7 @@ import com.falcon.suitagent.util.HostUtil;
 import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.vo.snmp.SNMPV3UserInfo;
 import lombok.extern.slf4j.Slf4j;
+import org.snmp4j.MessageException;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
 import org.snmp4j.UserTarget;
@@ -36,14 +37,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SNMPV3Session {
 
 //    private static final String cacheKey_equipmentName = "equipmentName";
-    private static final String cacheKey_sysDesc = "sysDesc";
-    private static final String cacheKey_sysVendor = "sysVendor";
-    private static final String cacheKey_version = "version";
+    private static final String CACHE_KEY_SYS_DESC = "sysDesc";
+    private static final String CACHE_KEY_SYS_VENDOR = "sysVendor";
+    private static final String CACHE_KEY_VERSION = "version";
+    private static final int TIMEOUT = 8000;
 
     private Snmp snmp;
     private UserTarget target;
     private SNMPV3UserInfo userInfo;
-    //信息缓存
+    /**
+     * 信息缓存
+     */
     private final ConcurrentHashMap<String,Object> infoCache = new ConcurrentHashMap<>();
 
     @Override
@@ -95,7 +99,7 @@ public class SNMPV3Session {
         target.setVersion(SnmpConstants.version3);
         target.setSecurityLevel(SecurityLevel.AUTH_PRIV);
         target.setAddress(GenericAddress.parse(userInfo.getProtocol() + ":" + userInfo.getAddress() + "/" + userInfo.getPort()));
-        target.setTimeout(8000);
+        target.setTimeout(TIMEOUT);
         target.setRetries(1);
     }
 
@@ -105,9 +109,14 @@ public class SNMPV3Session {
      */
     public boolean isValid(){
         try {
-            //超时将会返回null
+            //超时将会返回null，标记不可用
             return SNMPHelper.snmpGet(snmp,target,SNMPHelper.SYS_DESC_OID) != null;
         } catch (Exception e) {
+            if (e instanceof MessageException && e.getMessage().contains("Unknown security name")) {
+                //mark：经部分设备测试，即使username（securityName）不对，也能得到snmp的响应，只是返回结果为数字，非设备的描述信息
+                log.warn("SNMP连接({}:{}-{})可用性检测警告，预期内的错误，返回 可用：{}",userInfo.getAddress(),userInfo.getPort(),userInfo.getEndPoint(),e.getMessage());
+                return true;
+            }
             log.error("SNMP连接({}:{}-{})可用性检测为失败(不可用)",userInfo.getAddress(),userInfo.getPort(),userInfo.getEndPoint(),e);
             return false;
         }
@@ -154,7 +163,7 @@ public class SNMPV3Session {
      * @throws IOException
      */
     public String getSysDesc() throws IOException {
-        String key = getInfoCacheKey() + cacheKey_sysDesc;
+        String key = getInfoCacheKey() + CACHE_KEY_SYS_DESC;
         String sysDesc = (String) infoCache.get(key);
         if(sysDesc != null){
             return sysDesc;
@@ -177,7 +186,7 @@ public class SNMPV3Session {
      * @throws IOException
      */
     public VendorType getSysVendor() throws IOException {
-        String key = getInfoCacheKey() + cacheKey_sysVendor;
+        String key = getInfoCacheKey() + CACHE_KEY_SYS_VENDOR;
         VendorType sysVendor = (VendorType) infoCache.get(key);
         if(sysVendor != null){
             return sysVendor;
@@ -197,7 +206,7 @@ public class SNMPV3Session {
      * @throws IOException
      */
     public float getSysVersion() throws IOException {
-        String key = getInfoCacheKey() + cacheKey_version;
+        String key = getInfoCacheKey() + CACHE_KEY_VERSION;
         Float version = (Float) infoCache.get(key);
         if(version != null){
             return version;
