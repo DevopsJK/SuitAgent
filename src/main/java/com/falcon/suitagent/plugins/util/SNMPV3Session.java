@@ -258,7 +258,7 @@ public class SNMPV3Session {
     private OID getPrivProtocol(String privType) throws AgentArgumentException {
 
         if (privType == null
-                || privType.equalsIgnoreCase("none")
+                || "none".equalsIgnoreCase(privType)
                 || privType.length() == 0) {
             return null;
         }
@@ -291,12 +291,12 @@ public class SNMPV3Session {
      */
     private OID getAuthProtocol(String authMethod) throws AgentArgumentException {
         if (authMethod == null
-                || authMethod.equalsIgnoreCase("none")
+                || "none".equalsIgnoreCase(authMethod)
                 || authMethod.length() == 0) {
             return null;
-        } else if (authMethod.equalsIgnoreCase("md5")) {
+        } else if ("md5".equalsIgnoreCase(authMethod)) {
             return AuthMD5.ID;
-        } else if (authMethod.equalsIgnoreCase("sha")) {
+        } else if ("sha".equalsIgnoreCase(authMethod)) {
             return AuthSHA.ID;
         } else {
             throw new AgentArgumentException("unknown authentication protocol: " + authMethod);
