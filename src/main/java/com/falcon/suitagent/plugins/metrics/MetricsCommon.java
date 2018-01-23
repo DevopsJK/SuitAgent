@@ -212,7 +212,7 @@ public abstract class MetricsCommon {
             //mock处理
             boolean isOK = false;
             for (String key : mockService.keySet()) {
-                String targetType = "service.type=" + key;
+                String targetType = "serviceType=" + key;
                 String tags = falconReportObject.getTags();
                 if(!StringUtils.isEmpty(tags)){
                     if(tags.contains(targetType)){
@@ -264,7 +264,7 @@ public abstract class MetricsCommon {
                     String tagName = ss[0].trim();
                     String tagValue = ss[1].trim();
                     if("agentSignName".equals(tagName) || "service".equals(tagName)){
-                        log.info("判断mock需求2：【tagName:{}】【tagValue:{}】",tagName,tagValue);
+                        log.info("判断mock需求2：【tagName:{}】【tagValue:{}】【mockTarget:{}】",tagName,tagValue,targetService);
                         if(tagValue.contains(targetService)){
                             mock = true;
                             break;
