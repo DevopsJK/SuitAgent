@@ -19,6 +19,8 @@ import org.apache.commons.lang.math.NumberUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 /**
@@ -28,6 +30,8 @@ import java.util.*;
 public class MongoDBPlugin implements DetectPlugin {
 
     private int step;
+
+    private Map<String,String> mongoAuthConf = new HashMap<>();
 
     /**
      * 插件初始化操作
@@ -41,6 +45,11 @@ public class MongoDBPlugin implements DetectPlugin {
     @Override
     public void init(Map<String, String> properties) {
         this.step = Integer.parseInt(properties.get("step"));
+        for (String key : properties.keySet()) {
+            if (key.startsWith("mongodb.auth")) {
+                mongoAuthConf.put(key,properties.get(key));
+            }
+        }
     }
 
     /**
@@ -115,13 +124,40 @@ public class MongoDBPlugin implements DetectPlugin {
             String[] ss = address.split(":-->:");
             String binPath = ss[0];
             String port = ss[1];
+            String user = "";
+            boolean hasAuth = false;
             String cmd = String.format("echo 'db.serverStatus()' | %s --port %s",binPath,port);
+            if ((user = mongoAuthConf.get(String.format("mongodb.auth.%s.user",port))) != null) {
+                //有指定端口的授权配置
+                String pwd = mongoAuthConf.get(String.format("mongodb.auth.%s.pwd",port));
+                if (StringUtils.isEmpty(pwd)) {
+                    log.error("{}：缺少的配置项：{}",this.getClass().getSimpleName(),String.format("mongodb.auth.%s.pwd",port));
+                    return null;
+                }
+                cmd += " -u " + user + " -p " + pwd + " --authenticationDatabase admin";
+                hasAuth = true;
+            }else if ((user = mongoAuthConf.get("mongodb.auth.user")) != null) {
+                //有通用的授权配置
+                String pwd = mongoAuthConf.get("mongodb.auth.pwd");
+                if (StringUtils.isEmpty(pwd)) {
+                    log.error("{}：缺少的配置项：{}",this.getClass().getSimpleName(),"mongodb.auth.pwd");
+                    return null;
+                }
+                cmd += " -u " + user + " -p " + pwd + " --authenticationDatabase admin";
+                hasAuth = true;
+            }
             CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
             //若不能访问，添加ip进行访问
             if (!executeResult.msg.contains("bye")){
                 executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd + " --host " + HostUtil.getHostIp(),false,7);
             }
             if(!StringUtils.isEmpty(executeResult.msg)){
+                if (hasAuth) {
+                    if (executeResult.msg.contains("Authentication failed") || executeResult.msg.contains("login failed")) {
+                        log.error("{}:实例端口 {} 授权访问认证失败，请检查MongoDB授权访问配置是否正确",this.getClass().getSimpleName(),port);
+                        return null;
+                    }
+                }
                 String msg = executeResult.msg;
                 log.debug(msg);
                 int startSymbol = msg.indexOf("{");
@@ -182,25 +218,31 @@ public class MongoDBPlugin implements DetectPlugin {
         try {
             String binPath = getMongoBinPath();
             if (binPath != null){
-                //命令行Post信息
-                Set<String> ports = getPortsFromPs();
-                //命令行配置文件的Port信息
-                Set<String> confs = getRunConfFilesFromPs();
-                for (String conf : confs) {
-                    String port = getPortFromConfFile(conf);
-                    if (port == null){
-                        log.warn("从配置文件{}未找到MongoDB的启动端口，指定默认端口：27017",conf);
-                        ports.add("27017");
-                    }else {
-                        ports.add(port);
+                if (FileUtil.isExist(binPath)) {
+                    log.info("自动探测mongo执行文件位置：{}",binPath);
+                    //命令行Post信息
+                    Set<String> ports = getPortsFromPs();
+                    //命令行配置文件的Port信息
+                    Set<String> confs = getRunConfFilesFromPs();
+                    for (String conf : confs) {
+                        String port = getPortFromConfFile(binPath,conf);
+                        if (port == null){
+                            log.warn("从配置文件{}未找到MongoDB的启动端口，指定默认端口：27017",conf);
+                            ports.add("27017");
+                        }else {
+                            log.info("{}:发现端口 {}",this.getClass().getSimpleName(),port);
+                            ports.add(port);
+                        }
                     }
-                }
 
-                for (String port : ports) {
-                    if (port != null){
-                        //返回格式 BinPath:-->:Port
-                        adds.add(binPath + ":-->:" + port);
+                    for (String port : ports) {
+                        if (port != null){
+                            //返回格式 BinPath:-->:Port
+                            adds.add(binPath + ":-->:" + port);
+                        }
                     }
+                }else {
+                    log.error("{}：路径不存在：{}",this.getClass().getSimpleName(),binPath);
                 }
             }
         } catch (Exception e) {
@@ -211,11 +253,19 @@ public class MongoDBPlugin implements DetectPlugin {
 
     /**
      * 从配置文件读取端口地址
+     *
+     * @param binPath
      * @param confPath
      * @return
      */
-    private String getPortFromConfFile(String confPath){
+    private String getPortFromConfFile(String binPath, String confPath){
         if (confPath != null){
+            if (!confPath.startsWith(File.separator)) {
+                //相对路径的配置文件，进行绝对路径转换
+                String dir = new File(binPath).toPath().getParent().toFile().getAbsolutePath();
+                Path path = Paths.get(dir,confPath);
+                confPath = path.toFile().getAbsolutePath();
+            }
             try {
                 String content = FileUtil.getTextFileContent(confPath);
                 String[] cs = content.split("\n");
@@ -358,7 +408,7 @@ public class MongoDBPlugin implements DetectPlugin {
                         String[] files = file.list();
                         if (files != null) {
                             for (String file1 : files) {
-                                if (file1.equals("mongo")){
+                                if ("mongo".equals(file1)){
                                     path = s + File.separator + file1;
                                     break;
                                 }
