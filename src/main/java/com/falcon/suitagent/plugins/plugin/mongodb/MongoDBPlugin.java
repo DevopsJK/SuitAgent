@@ -45,6 +45,7 @@ public class MongoDBPlugin implements DetectPlugin {
     @Override
     public void init(Map<String, String> properties) {
         this.step = Integer.parseInt(properties.get("step"));
+        mongoAuthConf.clear();
         for (String key : properties.keySet()) {
             if (key.startsWith("mongodb.auth")) {
                 mongoAuthConf.put(key,properties.get(key));
