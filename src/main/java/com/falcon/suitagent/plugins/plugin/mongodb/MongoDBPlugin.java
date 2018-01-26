@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author guqiu@yiji.com
@@ -32,6 +34,10 @@ public class MongoDBPlugin implements DetectPlugin {
     private int step;
 
     private Map<String,String> mongoAuthConf = new HashMap<>();
+    private final List<Pattern> patterns = Arrays.asList(
+            Pattern.compile(":\\s*\\w*\\s*,(\\s*\\w*\\s*,)+"),
+            Pattern.compile(":\\s*\"\\w*\"\\s*,(\\s*\"\\w*\"\\s*,)+")
+    );
 
     /**
      * 插件初始化操作
@@ -164,6 +170,23 @@ public class MongoDBPlugin implements DetectPlugin {
                 int startSymbol = msg.indexOf("{");
                 int endSymbol = msg.lastIndexOf("}");
                 if(startSymbol != -1 && endSymbol != -1){
+                    //修正一些json语法不对的字符串，如
+                    // "ts": 1516943429,20, 修改为 "ts": [1516943429,20],
+                    // "xxx": "zzz","ccc", 修改为 "xxx": ["zzz","ccc"],
+                    boolean hasPatternOption = false;
+                    for (Pattern pattern : patterns) {
+                        Matcher matcher = pattern.matcher(msg);
+                        while (matcher.find()) {
+                            String find = matcher.group();
+                            msg = msg.replace(find,":" + "[" + find.substring(0,find.length() - 1).replace(":","") + "],");
+                            hasPatternOption = true;
+                        }
+                    }
+                    if (hasPatternOption) {
+                        //重新调整索引
+                        startSymbol = msg.indexOf("{");
+                        endSymbol = msg.lastIndexOf("}");
+                    }
                     String json = msg.substring(startSymbol,endSymbol + 1);
                     json = transform(json);
                     JSONObject jsonObject = JSON.parseObject(json);
