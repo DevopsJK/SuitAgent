@@ -170,25 +170,18 @@ public class MongoDBPlugin implements DetectPlugin {
                 int startSymbol = msg.indexOf("{");
                 int endSymbol = msg.lastIndexOf("}");
                 if(startSymbol != -1 && endSymbol != -1){
+                    String json = msg.substring(startSymbol,endSymbol + 1);
+                    json = transform(json);
                     //修正一些json语法不对的字符串，如
                     // "ts": 1516943429,20, 修改为 "ts": [1516943429,20],
                     // "xxx": "zzz","ccc", 修改为 "xxx": ["zzz","ccc"],
-                    boolean hasPatternOption = false;
                     for (Pattern pattern : patterns) {
-                        Matcher matcher = pattern.matcher(msg);
+                        Matcher matcher = pattern.matcher(json);
                         while (matcher.find()) {
                             String find = matcher.group();
-                            msg = msg.replace(find,":" + "[" + find.substring(0,find.length() - 1).replace(":","") + "],");
-                            hasPatternOption = true;
+                            json = json.replace(find,":" + "[" + find.substring(0,find.length() - 1).replace(":","") + "],");
                         }
                     }
-                    if (hasPatternOption) {
-                        //重新调整索引
-                        startSymbol = msg.indexOf("{");
-                        endSymbol = msg.lastIndexOf("}");
-                    }
-                    String json = msg.substring(startSymbol,endSymbol + 1);
-                    json = transform(json);
                     JSONObject jsonObject = JSON.parseObject(json);
                     Map<String,Object> map = new HashMap<>();
                     JSONUtil.jsonToMap(map,jsonObject,null);
