@@ -139,7 +139,8 @@ public class TcpPlugin implements DetectPlugin {
     public void init(Map<String, String> properties) {
         this.step = Integer.parseInt(properties.get("step"));
         Set<String> keys = properties.keySet();
-        keys.stream().filter(key -> key != null).filter(key -> key.contains("address")).forEach(key -> {
+        addresses.clear();
+        keys.stream().filter(Objects::nonNull).filter(key -> key.contains("address")).forEach(key -> {
             addresses.put(key, properties.get(key));
         });
     }

@@ -12,6 +12,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.plugins.DetectPlugin;
+import com.falcon.suitagent.plugins.util.CacheUtil;
 import com.falcon.suitagent.util.*;
 import com.falcon.suitagent.vo.detect.DetectResult;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -39,6 +41,10 @@ public class MongoDBPlugin implements DetectPlugin {
             Pattern.compile(":\\s*\"\\w*\"\\s*,(\\s*\"\\w*\"\\s*,)+")
     );
 
+    private String mongoPath = "";
+    private final Map<String, String> addresses = new HashMap<>();
+    private final ConcurrentHashMap<String, String> tagsCache = new ConcurrentHashMap<>();
+
     /**
      * 插件初始化操作
      * 该方法将会在插件运行前进行调用
@@ -51,12 +57,19 @@ public class MongoDBPlugin implements DetectPlugin {
     @Override
     public void init(Map<String, String> properties) {
         this.step = Integer.parseInt(properties.get("step"));
+        if (StringUtils.isNotEmpty(properties.get("mongo.path"))) {
+            mongoPath = properties.get("mongo.path");
+        }
         mongoAuthConf.clear();
         for (String key : properties.keySet()) {
             if (key.startsWith("mongodb.auth")) {
                 mongoAuthConf.put(key,properties.get(key));
             }
         }
+        addresses.clear();
+        properties.keySet().stream().filter(Objects::nonNull).filter(key -> key.startsWith("address")).forEach(key -> {
+            addresses.put(key, properties.get(key));
+        });
     }
 
     /**
@@ -108,9 +121,19 @@ public class MongoDBPlugin implements DetectPlugin {
      */
     @Override
     public String agentSignName(String address) {
-        String[] split = address.split(":-->:");
+        Map<String,String> tagsMap = CacheUtil.getTags(addresses,tagsCache,address);
+        String adds = tagsMap.get("adds");
+        String[] split = adds.split(":-->:");
         if (split.length >= 2) {
-            return split[1];
+            String port = split[1];
+            String ip = "";
+            if (split[1].contains(":")) {
+                //远程MongoDB IP
+                ip = split[1].split("\\:")[0];
+                //远程MongoDB端口
+                port = split[1].split("\\:")[1];
+            }
+            return ("".equals(ip) ? "" : (ip + ":")) + port;
         }
         return null;
     }
@@ -127,37 +150,72 @@ public class MongoDBPlugin implements DetectPlugin {
         detectResult.setSuccess(false);
 
         try {
-            //address格式：BinPath:-->:Port
-            String[] ss = address.split(":-->:");
+            // address格式：
+            // 本地实例：BinPath:-->:Port
+            // 远程实例：BinPath:-->:IP:Port
+            Map<String,String> tagsMap = CacheUtil.getTags(addresses,tagsCache,address);
+            String tags = tagsMap.get("tags");
+            String adds = tagsMap.get("adds");
+            detectResult.setCommonTag(tags);
+            String[] ss = adds.split(":-->:");
             String binPath = ss[0];
             String port = ss[1];
+            String ip;
+            boolean isRemote = false;
+            if (ss[1].contains(":")) {
+                //远程MongoDB IP
+                ip = ss[1].split("\\:")[0];
+                //远程MongoDB端口
+                port = ss[1].split("\\:")[1];
+                isRemote = true;
+            }else {
+                ip = HostUtil.getHostIp();
+            }
             String user = "";
             boolean hasAuth = false;
-            String cmd = String.format("echo 'db.serverStatus()' | %s --port %s",binPath,port);
-            if ((user = mongoAuthConf.get(String.format("mongodb.auth.%s.user",port))) != null) {
-                //有指定端口的授权配置
-                String pwd = mongoAuthConf.get(String.format("mongodb.auth.%s.pwd",port));
-                if (StringUtils.isEmpty(pwd)) {
-                    log.error("{}：缺少的配置项：{}",this.getClass().getSimpleName(),String.format("mongodb.auth.%s.pwd",port));
-                    return null;
+            String cmd = String.format("echo 'db.serverStatus()' | %s --port %s --host %s",binPath,port,ip);
+            if (isRemote) {
+                if ((user = mongoAuthConf.get(String.format("mongodb.auth.remote.%s.%s.user",ip,port))) != null) {
+                    //有指定远程端口的授权配置
+                    String pwd = mongoAuthConf.get(String.format("mongodb.auth.remote.%s.%s.pwd",ip,port));
+                    if (StringUtils.isEmpty(pwd)) {
+                        log.error("{}：缺少的配置项：{}",this.getClass().getSimpleName(),String.format("mongodb.auth.remote.%s.%s.pwd",ip,port));
+                        return null;
+                    }
+                    cmd += " -u " + user + " -p " + pwd + " --authenticationDatabase admin";
+                    hasAuth = true;
+                }else if ((user = mongoAuthConf.get("mongodb.auth.remote.user")) != null) {
+                    //有指定通用的远程授权配置
+                    String pwd = mongoAuthConf.get("mongodb.auth.remote.pwd");
+                    if (StringUtils.isEmpty(pwd)) {
+                        log.error("{}：缺少的配置项：{}",this.getClass().getSimpleName(),"mongodb.auth.remote.pwd");
+                        return null;
+                    }
+                    cmd += " -u " + user + " -p " + pwd + " --authenticationDatabase admin";
+                    hasAuth = true;
                 }
-                cmd += " -u " + user + " -p " + pwd + " --authenticationDatabase admin";
-                hasAuth = true;
-            }else if ((user = mongoAuthConf.get("mongodb.auth.user")) != null) {
-                //有通用的授权配置
-                String pwd = mongoAuthConf.get("mongodb.auth.pwd");
-                if (StringUtils.isEmpty(pwd)) {
-                    log.error("{}：缺少的配置项：{}",this.getClass().getSimpleName(),"mongodb.auth.pwd");
-                    return null;
+            }else {
+                if ((user = mongoAuthConf.get(String.format("mongodb.auth.%s.user",port))) != null) {
+                    //有指定端口的授权配置
+                    String pwd = mongoAuthConf.get(String.format("mongodb.auth.%s.pwd",port));
+                    if (StringUtils.isEmpty(pwd)) {
+                        log.error("{}：缺少的配置项：{}",this.getClass().getSimpleName(),String.format("mongodb.auth.%s.pwd",port));
+                        return null;
+                    }
+                    cmd += " -u " + user + " -p " + pwd + " --authenticationDatabase admin";
+                    hasAuth = true;
+                }else if ((user = mongoAuthConf.get("mongodb.auth.user")) != null) {
+                    //有通用的授权配置
+                    String pwd = mongoAuthConf.get("mongodb.auth.pwd");
+                    if (StringUtils.isEmpty(pwd)) {
+                        log.error("{}：缺少的配置项：{}",this.getClass().getSimpleName(),"mongodb.auth.pwd");
+                        return null;
+                    }
+                    cmd += " -u " + user + " -p " + pwd + " --authenticationDatabase admin";
+                    hasAuth = true;
                 }
-                cmd += " -u " + user + " -p " + pwd + " --authenticationDatabase admin";
-                hasAuth = true;
             }
             CommandUtilForUnix.ExecuteResult executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd,false,7);
-            //若不能访问，添加ip进行访问
-            if (!executeResult.msg.contains("bye")){
-                executeResult = CommandUtilForUnix.execWithReadTimeLimit(cmd + " --host " + HostUtil.getHostIp(),false,7);
-            }
             if(!StringUtils.isEmpty(executeResult.msg)){
                 if (hasAuth) {
                     if (executeResult.msg.contains("Authentication failed") || executeResult.msg.contains("login failed")) {
@@ -219,7 +277,20 @@ public class MongoDBPlugin implements DetectPlugin {
      */
     @Override
     public Collection<String> detectAddressCollection() {
-        return null;
+        CacheUtil.initTagsCache(addresses,tagsCache);
+        Set<String> adders = new HashSet<>();
+        for (String address : addresses.values()) {
+            adders.addAll(helpTransformAddressCollection(address, ","));
+        }
+
+        String binPath = getMongoBinPath();
+        Set<String> fi = new HashSet<>();
+        for (String adder : adders) {
+            fi.add(binPath + ":-->:" + adder);
+        }
+        //添加自动探测地址结果
+        fi.addAll(autoDetectAddress());
+        return fi;
     }
 
     /**
@@ -387,6 +458,9 @@ public class MongoDBPlugin implements DetectPlugin {
      * @return
      */
     private String getMongoBinPath(){
+        if (StringUtils.isNotEmpty(mongoPath)) {
+            return mongoPath;
+        }
         String path = null;
         try {
             //which或whereis

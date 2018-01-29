@@ -24,6 +24,7 @@ package com.falcon.suitagent.plugins.plugin.redis;
 import com.falcon.suitagent.falcon.CounterType;
 import com.falcon.suitagent.plugins.DetectPlugin;
 import com.falcon.suitagent.plugins.Plugin;
+import com.falcon.suitagent.plugins.util.CacheUtil;
 import com.falcon.suitagent.util.*;
 import com.falcon.suitagent.vo.detect.DetectResult;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,10 @@ public class RedisPlugin implements DetectPlugin {
      * 配置文件配置的端口和对应配置文件路径
      */
     private Map<String,String> redisPortToConfMap = new HashMap<>();
+
+    private String redisCli = "";
+    private final Map<String, String> addresses = new HashMap<>();
+    private final ConcurrentHashMap<String, String> tagsCache = new ConcurrentHashMap<>();
 
     /**
      * 需要采集相对变化量的指标
@@ -90,10 +95,17 @@ public class RedisPlugin implements DetectPlugin {
     @Override
     public void init(Map<String, String> properties) {
         this.step = Integer.parseInt(properties.get("step"));
+        if (StringUtils.isNotEmpty(properties.get("redis.cli.path"))) {
+            redisCli = properties.get("redis.cli.path");
+        }
         Set<String> keys = properties.keySet();
         keys.stream().filter(key -> key.startsWith("redis.conf")).forEach(key -> {
             String port = key.replace("redis.conf.","");
             redisPortToConfMap.put(port,properties.get(key));
+        });
+        addresses.clear();
+        keys.stream().filter(Objects::nonNull).filter(key -> key.startsWith("address")).forEach(key -> {
+            addresses.put(key, properties.get(key));
         });
     }
 
@@ -147,8 +159,12 @@ public class RedisPlugin implements DetectPlugin {
     @Override
     public String agentSignName(String address) {
         try {
-            String addr = address.split(" ")[1];
-            String agentSignName = addr.replace(":","-");
+            Map<String,String> tagsMap = CacheUtil.getTags(addresses,tagsCache,address);
+            String adds = tagsMap.get("adds");
+            if (adds.contains(" ")) {
+                adds = adds.split("\\s+")[1];
+            }
+            String agentSignName = adds.replace(":","-");
             String ip = HostUtil.getHostIp();
             agentSignName = agentSignName.
                     replace("0.0.0.0",ip).
@@ -171,22 +187,32 @@ public class RedisPlugin implements DetectPlugin {
     @Override
     public DetectResult detectResult(String address) {
         DetectResult detectResult = new DetectResult();
+
         try {
             String redisCli;
-            if (FileUtil.isExist(CACHE_CLIENT[0])) {
+            Map<String,String> tagsMap = CacheUtil.getTags(addresses,tagsCache,address);
+            String tags = tagsMap.get("tags");
+            String adds = tagsMap.get("adds");
+            detectResult.setCommonTag(tags);
+
+            if (StringUtils.isNotEmpty(CACHE_CLIENT[0])) {
                 //使用缓存的客户端位置
                 redisCli = CACHE_CLIENT[0];
-            }else {
+            }else if (StringUtils.isNotEmpty(this.redisCli)){
+                redisCli = this.redisCli;
+                CACHE_CLIENT[0] = redisCli;
+            }else{
+
                 //探测客户端位置
                 CommandUtilForUnix.ExecuteResult cli = CommandUtilForUnix.execWithReadTimeLimit("whereis redis-cli",false,7);
                 redisCli = cli.msg.replace("redis-cli:","").trim();
                 if (StringUtils.isEmpty(redisCli) || !FileUtil.isExist(redisCli)){
-                    String cliPath = address.split(" ")[0].replace("redis-server","redis-cli");
+                    String cliPath = adds.split(" ")[0].replace("redis-server","redis-cli");
                     if(FileUtil.isExist(cliPath)){
                         redisCli = cliPath;
                         CACHE_CLIENT[0] = redisCli;
                     }else {
-                        log.warn("未找到redis-cli的执行路径（系统PATH中未找到 redis-cli 命令，且 redis-server 没有用绝对路径方式启动：{}。请将redis-cli加入系统PATH或以️绝对路径方式启动redis-server），使用默认的redis-cli命令",address.split(" ")[0]);
+                        log.warn("未找到redis-cli的执行路径（系统PATH中未找到 redis-cli 命令，且 redis-server 没有用绝对路径方式启动：{}。请将redis-cli加入系统PATH或以️绝对路径方式启动redis-server），使用默认的redis-cli命令",adds.split(" ")[0]);
                         redisCli = "redis-cli";
                     }
                 }else if (FileUtil.isExist(redisCli)) {
@@ -194,21 +220,35 @@ public class RedisPlugin implements DetectPlugin {
                 }
             }
 
-//            String ip = address.split("\\:")[0];
-            String port = address.split("\\:")[1];
+            if (!FileUtil.isExist(redisCli)) {
+                log.error("{}:redis-cli执行文件不存在：{}",this.getClass().getSimpleName(),redisCli);
+                return null;
+            }
+
+            String ip;
+            if (adds.contains("redis-server")) {
+                ip = adds.split("redis-server")[1].trim().split("\\:")[0];
+            }else {
+                ip = adds.split("\\:")[0];
+            }
+            String port = adds.split("\\:")[1];
+
+            if ("*".equals(ip)) {
+                ip = "127.0.0.1";
+            }
 
             String cmd4Ping;
             if (redisPortToConfMap.get(port) == null){
-                cmd4Ping = String.format("%s -p %s ping",redisCli,port);
+                cmd4Ping = String.format("%s -h %s -p %s ping",redisCli,ip,port);
             }else {
-                cmd4Ping = String.format("%s -a %s -p %s ping",redisCli,getRedisPasswordFromConfFile(redisPortToConfMap.get(port)),port);
+                cmd4Ping = String.format("%s -h %s -a %s -p %s ping",redisCli,ip,getRedisPasswordFromConfFile(redisPortToConfMap.get(port)),port);
             }
 
             String cmd4Info;
             if (redisPortToConfMap.get(port) == null){
-                cmd4Info = String.format("%s -p %s info",redisCli,port);
+                cmd4Info = String.format("%s -h %s -p %s info",redisCli,ip,port);
             }else {
-                cmd4Info = String.format("%s -a %s -p %s info",redisCli,getRedisPasswordFromConfFile(redisPortToConfMap.get(port)),port);
+                cmd4Info = String.format("%s -h %s -a %s -p %s info",redisCli,ip,getRedisPasswordFromConfFile(redisPortToConfMap.get(port)),port);
             }
 
             boolean detectSuccess = false;
@@ -240,7 +280,7 @@ public class RedisPlugin implements DetectPlugin {
                         map.put(key,value);
                     }
                 }
-                detectResult.setMetricsList(getInfoMetrics(map,address));
+                detectResult.setMetricsList(getInfoMetrics(map,adds));
 
             }else {
                 log.error("Redis采集命令{}执行失败：{}",cmd4Info,infoResult);
@@ -454,7 +494,14 @@ public class RedisPlugin implements DetectPlugin {
      */
     @Override
     public Collection<String> detectAddressCollection() {
-        return new ArrayList<>();
+        CacheUtil.initTagsCache(addresses,tagsCache);
+        Set<String> adders = new HashSet<>();
+        for (String address : addresses.values()) {
+            adders.addAll(helpTransformAddressCollection(address, ","));
+        }
+        //添加自动探测地址结果
+        adders.addAll(autoDetectAddress());
+        return adders;
     }
 
     /**
