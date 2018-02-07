@@ -19,6 +19,7 @@ import com.falcon.suitagent.util.MapUtil;
 import com.falcon.suitagent.util.Maths;
 import com.falcon.suitagent.util.StringUtils;
 import com.falcon.suitagent.vo.jmx.JMXMetricsConfiguration;
+import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.math.NumberUtils;
 
@@ -61,6 +62,7 @@ public class JMXMetricsValue extends MetricsCommon {
     /**
      * 构建监控值报告的中间对象
      */
+    @EqualsAndHashCode
     private class KitObjectNameMetrics {
         JMXObjectNameInfo jmxObjectNameInfo;
         JMXMetricsConfiguration jmxMetricsConfiguration;

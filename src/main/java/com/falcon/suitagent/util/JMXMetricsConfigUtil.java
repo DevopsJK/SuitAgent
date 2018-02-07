@@ -19,12 +19,15 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author guqiu@yiji.com
  */
 @Slf4j
 public class JMXMetricsConfigUtil {
+
 
     /**
      * 获取需要采集的监控项配置
@@ -55,20 +58,30 @@ public class JMXMetricsConfigUtil {
             try (FileInputStream in = new FileInputStream(propertiesPath)) {
                 Properties properties = new Properties();
                 properties.load(in);
-                for (int i = 1; i <= 200; i++) {
-                    String objectName = basePropertiesKey + i + ".objectName";
-                    if (!StringUtils.isEmpty(properties.getProperty(objectName))) {
-                        JMXMetricsConfiguration metricsConfiguration = new JMXMetricsConfiguration();
-                        metricsConfiguration.setObjectName(properties.getProperty(objectName));//设置ObjectName
-                        metricsConfiguration.setCounterType(properties.getProperty(basePropertiesKey + i + ".counterType"));//设置counterType
-                        metricsConfiguration.setMetrics(properties.getProperty(basePropertiesKey + i + ".metrics"));//设置metrics
-                        metricsConfiguration.setValueExpress(properties.getProperty(basePropertiesKey + i + ".valueExpress"));//设置metrics
-                        String tag = properties.getProperty(basePropertiesKey + i + ".tag");
-                        metricsConfiguration.setTag(StringUtils.isEmpty(tag) ? "" : tag);//设置tag
-                        String alias = properties.getProperty(basePropertiesKey + i + ".alias");
-                        metricsConfiguration.setAlias(StringUtils.isEmpty(alias) ? metricsConfiguration.getMetrics() : alias);
+                for (Object o : properties.keySet()) {
+                    String key = (String) o;
+                    if (key != null && key.matches(basePropertiesKey + "\\.?\\w+\\.objectName")) {
+                        Pattern prefixPattern = Pattern.compile(basePropertiesKey + "\\.?\\w+\\.");
+                        Matcher prefixMatcher = prefixPattern.matcher(key);
+                        if (prefixMatcher.find()) {
+                            String prefix = prefixMatcher.group();
+                            JMXMetricsConfiguration metricsConfiguration = new JMXMetricsConfiguration();
+                            //设置ObjectName
+                            metricsConfiguration.setObjectName(properties.getProperty(prefix + "objectName"));
+                            //设置counterType
+                            metricsConfiguration.setCounterType(properties.getProperty(prefix + "counterType"));
+                            //设置metrics
+                            metricsConfiguration.setMetrics(properties.getProperty(prefix + "metrics"));
+                            //设置metrics
+                            metricsConfiguration.setValueExpress(properties.getProperty(prefix + "valueExpress"));
+                            String tag = properties.getProperty(prefix + "tag");
+                            //设置tag
+                            metricsConfiguration.setTag(StringUtils.isEmpty(tag) ? "" : tag);
+                            String alias = properties.getProperty(prefix + "alias");
+                            metricsConfiguration.setAlias(StringUtils.isEmpty(alias) ? metricsConfiguration.getMetrics() : alias);
 
-                        jmxMetricsConfigurations.add(metricsConfiguration);
+                            jmxMetricsConfigurations.add(metricsConfiguration);
+                        }
                     }
                 }
             } catch (IOException e) {
